@@ -87,9 +87,16 @@ unchanged.
   to the character going forward.
 
 ## Character Persona
+Persona includes
+- personallity
+- speach pattern / accent
+- rather the character is aggressive in combat or more hestiant
 
-### 1. The AI is free to define persona
+### 1. The AI is free to define persona (primary)
+The AI defines the persona of the character
 
+### 2. The DM defines the persona (secondary)
+The DM will define the persona of teh character, how they should act and function in the group.  This is more of when the PC is in a supporting role and not one of the main characters.
 
 
 
@@ -123,10 +130,30 @@ play consistent and fast — never to contest the DM.
   - the AI PC's **owner** (the human who set up and plays alongside this
     character)
 
-## Goals 
+## Goals
 
-
-
+- **Table experience quality** — the AI PC should feel like a real, present
+  player at the table: natural conversational pacing and genuine
+  in-character reactions, not a monotone tool executing commands.
+- **Rules accuracy & consistency** — 5e math (attack rolls, damage, spell
+  effects, saving throws) is reliably correct so the DM never has to
+  double-check the AI's own rolls.
+- **Campaign continuity** — the AI PC remembers past sessions: its own
+  character growth, relationships with other PCs/NPCs, and ongoing plot
+  threads, and lets that history inform how it plays in future sessions.
+- **Low operational friction** — easy for the DM/owner to start and run;
+  recovers gracefully from disconnects or crashes without losing
+  character state.
+- **Player safety / table conduct** — the AI PC never kills or
+  permanently maims another player's character, even when its own
+  character's alignment or motivation (e.g. an evil-aligned PC) would
+  in-fiction justify it. This guardrail holds even in tension with
+  staying strictly in-character — protecting the group's fun overrides
+  in-fiction consistency here. NPCs/monsters are unaffected; normal
+  combat rules apply against them.
+- **OOC communication when needed** — the AI PC can step out of character
+  for brief clarifications (see Behavior Requirements) so genuine
+  ambiguity doesn't stall the table.
 
 ## Non-goals (v1)
 
