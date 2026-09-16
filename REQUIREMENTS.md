@@ -36,6 +36,63 @@ text-to-speech.
 Noted for a future generalization, not built now: VTT platform integration
 (Roll20, Foundry), non-Discord text chat, other game systems besides D&D 5e.
 
+
+## Character Creation
+
+### 1. The AI creates a character (primary)
+
+The AI is free to create the character. The DM may constrain any of the
+following before creation starts; anything the DM doesn't constrain is the
+AI's call:
+
+- **Class** — DM may suggest or restrict based on party needs (e.g. "we
+  need a healer").
+- **Alignment** — DM may restrict to good, evil, or a specific alignment.
+- **Race** — DM may limit race options.
+- **Gender** — DM may limit gender options.
+- **Starting level** — DM sets the party's starting level.
+- **Ability scores** — DM sets the generation method used at the table
+  (standard array, point buy, or rolled).
+- **Background/backstory** — free to the AI unless the DM specifies
+  otherwise.
+- **Starting equipment** — standard class equipment unless the DM
+  specifies otherwise.
+- **Name** — free to the AI; DM may request a change before the campaign
+  starts.
+
+Where the DM sets no constraint, the AI decides and presents the finished
+sheet to the DM for approval before session zero.
+
+### 2. DM provides a pre-made character sheet (secondary)
+
+The AI uses the pre-made character sheet provided by the DM as-is.
+
+- The AI can suggest changes (e.g. background story, race, gender,
+  starting equipment), but the DM has final say.
+- Once the campaign starts, the AI is free to make the character its own
+  in personality and roleplay, even though the DM controls the sheet's
+  mechanics.
+
+### 3. The AI assumes an existing character when a party member leaves (option)
+
+The AI is given the existing character sheet and a history of the
+campaign (session summaries/logs), and takes over the character at its
+current state — level, HP, inventory, and established backstory
+unchanged.
+
+- The AI infers personality/voice from the campaign history where it's
+  already established, and makes a reasonable judgment call to fill in
+  anything that isn't.
+- As with option 2, the DM has final say on any changes the AI proposes
+  to the character going forward.
+
+## Character Persona
+
+### 1. The AI is free to define persona
+
+
+
+
 ## Behavior Requirements
 
 ### In-character default, narrow OOC exception
@@ -65,6 +122,11 @@ play consistent and fast — never to contest the DM.
   - the **DM**
   - the AI PC's **owner** (the human who set up and plays alongside this
     character)
+
+## Goals 
+
+
+
 
 ## Non-goals (v1)
 
