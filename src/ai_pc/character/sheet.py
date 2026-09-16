@@ -46,6 +46,9 @@ class Condition(BaseModel):
 class CharacterSheet(BaseModel):
     name: str
     character_class: str
+    race: str = ""
+    gender: str = ""
+    alignment: str = ""
     level: int = 1
     background: str = ""
     persona: str = ""  # personality/voice, fed into the system prompt
