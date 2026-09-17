@@ -1,0 +1,23 @@
+[project]
+name = "ai-pc-shared"
+version = "0.1.0"
+description = "Shared infrastructure for AI-PC agents: character/rules schema, persistence, LLM client"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.40",
+    "pydantic>=2.6",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

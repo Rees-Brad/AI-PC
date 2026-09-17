@@ -10,11 +10,15 @@ import argparse
 import uuid
 
 from ai_pc.config import load_settings
-from ai_pc.llm.client import make_client
 from ai_pc.llm.prompts import build_system_prompt
 from ai_pc.llm.tools import build_tools
-from ai_pc.persistence.db import init_db, make_engine, make_session_factory
-from ai_pc.persistence.repository import append_session_log, get_character_row, load_character_sheet
+from ai_pc_shared.llm.client import make_client
+from ai_pc_shared.persistence.db import init_db, make_engine, make_session_factory
+from ai_pc_shared.persistence.repository import (
+    append_session_log,
+    get_character_row,
+    load_character_sheet,
+)
 
 
 def main() -> None:
@@ -34,11 +38,12 @@ def main() -> None:
             return
         character_id = get_character_row(session, args.character_name).id
 
-    client = make_client(settings)
+    client = make_client(settings.anthropic_api_key)
     tools = build_tools(args.character_name, session_factory)
     session_id = str(uuid.uuid4())[:8]
 
-    print(f"Chatting with {sheet.name} ({sheet.character_class} {sheet.level}). Type 'quit' to exit.\n")
+    print(f"Chatting with {sheet.name} ({sheet.character_class} {sheet.level}).")
+    print("Type 'quit' to exit.\n")
 
     messages: list = []
     while True:

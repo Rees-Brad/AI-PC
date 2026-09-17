@@ -1,8 +1,8 @@
 import anthropic
 from pydantic import BaseModel, Field
 
-from ai_pc.character.sheet import AbilityScores, CharacterSheet, InventoryItem
 from ai_pc.config import Settings
+from ai_pc_shared.character.sheet import AbilityScores, CharacterSheet, InventoryItem
 
 
 class CreationConstraints(BaseModel):
@@ -71,18 +71,9 @@ def _build_prompt(constraints: CreationConstraints) -> str:
     return "\n".join(lines)
 
 
-def create_character(
-    client: anthropic.Anthropic, settings: Settings, constraints: CreationConstraints
-) -> CharacterSheet:
-    response = client.messages.parse(
-        model=settings.ai_pc_model,
-        max_tokens=4000,
-        messages=[{"role": "user", "content": _build_prompt(constraints)}],
-        output_format=GeneratedCharacter,
-    )
-    generated = response.parsed_output
-
-    sheet = CharacterSheet(
+def sheet_from_generated(generated: GeneratedCharacter) -> CharacterSheet:
+    """Map a GeneratedCharacter (Claude's structured output) onto a CharacterSheet."""
+    return CharacterSheet(
         name=generated.name,
         character_class=generated.character_class,
         race=generated.race,
@@ -107,4 +98,19 @@ def create_character(
         known_spells=generated.known_spells,
         inventory=[InventoryItem(name=item) for item in generated.starting_equipment],
     )
-    return sheet
+
+
+def create_character(
+    client: anthropic.Anthropic, settings: Settings, constraints: CreationConstraints
+) -> CharacterSheet:
+    response = client.messages.parse(
+        model=settings.ai_pc_model,
+        max_tokens=4000,
+        messages=[{"role": "user", "content": _build_prompt(constraints)}],
+        output_format=GeneratedCharacter,
+    )
+    if response.parsed_output is None:
+        raise RuntimeError(
+            f"Claude did not return a structured character (stop_reason={response.stop_reason!r})"
+        )
+    return sheet_from_generated(response.parsed_output)

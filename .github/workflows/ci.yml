@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install packages (shared first, then agents/pc)
+        run: |
+          pip install --upgrade pip
+          pip install -e ./shared -e './agents/pc[dev]'
+          pip install ruff mypy
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Type-check (mypy)
+        run: mypy shared/src/ai_pc_shared agents/pc/src/ai_pc --ignore-missing-imports
+
+      - name: Test (pytest)
+        run: pytest
+
+      - name: Build/import check
+        run: python -c "import ai_pc_shared; import ai_pc"

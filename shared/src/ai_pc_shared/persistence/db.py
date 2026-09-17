@@ -3,7 +3,7 @@ from pathlib import Path
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from ai_pc.persistence.models import Base
+from ai_pc_shared.persistence.models import Base
 
 
 def make_engine(db_path: Path) -> Engine:

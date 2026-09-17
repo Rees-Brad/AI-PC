@@ -1,0 +1,36 @@
+[project]
+name = "ai-pc-agent-pc"
+version = "0.1.0"
+description = "AI-backed autonomous D&D 5e Player Character agent"
+requires-python = ">=3.10"
+dependencies = [
+    "ai-pc-shared",
+    "anthropic>=0.40",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+]
+
+[project.optional-dependencies]
+discord = [
+    "py-cord>=2.5",
+    "PyNaCl>=1.5",
+]
+voice = [
+    "faster-whisper>=1.0",
+    "webrtcvad>=2.0.10",
+    "piper-tts>=1.2",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+ai-pc = "ai_pc.main:run"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

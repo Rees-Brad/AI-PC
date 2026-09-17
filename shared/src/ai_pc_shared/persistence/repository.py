@@ -1,10 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ai_pc.character.sheet import CharacterSheet
-from ai_pc.character.sheet import Condition as SheetCondition
-from ai_pc.character.sheet import InventoryItem as SheetInventoryItem
-from ai_pc.persistence import models
+from ai_pc_shared.character.sheet import CharacterSheet
+from ai_pc_shared.character.sheet import Condition as SheetCondition
+from ai_pc_shared.character.sheet import InventoryItem as SheetInventoryItem
+from ai_pc_shared.persistence import models
 
 
 def get_character_row(session: Session, name: str) -> models.Character | None:

@@ -2,8 +2,8 @@ from anthropic import beta_tool
 from sqlalchemy.orm import sessionmaker
 
 from ai_pc.llm.prompts import sheet_summary
-from ai_pc.persistence.repository import load_character_sheet, save_character_sheet
-from ai_pc.rules_engine.dnd5e.dice import roll as roll_dice_expr
+from ai_pc_shared.persistence.repository import load_character_sheet, save_character_sheet
+from ai_pc_shared.rules_engine.dnd5e.dice import roll as roll_dice_expr
 
 
 def build_tools(character_name: str, session_factory: sessionmaker) -> list:

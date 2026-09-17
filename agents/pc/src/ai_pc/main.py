@@ -1,7 +1,7 @@
 import argparse
 
 from ai_pc.config import load_settings
-from ai_pc.persistence.db import init_db, make_engine
+from ai_pc_shared.persistence.db import init_db, make_engine
 
 
 def run() -> None:

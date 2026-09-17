@@ -13,10 +13,10 @@ import argparse
 
 from ai_pc.character.creation import CreationConstraints, create_character
 from ai_pc.config import load_settings
-from ai_pc.llm.client import make_client
 from ai_pc.llm.prompts import sheet_summary
-from ai_pc.persistence.db import init_db, make_engine, make_session_factory
-from ai_pc.persistence.repository import save_character_sheet
+from ai_pc_shared.llm.client import make_client
+from ai_pc_shared.persistence.db import init_db, make_engine, make_session_factory
+from ai_pc_shared.persistence.repository import save_character_sheet
 
 
 def main() -> None:
@@ -39,7 +39,7 @@ def main() -> None:
     )
 
     settings = load_settings()
-    client = make_client(settings)
+    client = make_client(settings.anthropic_api_key)
 
     print("Creating character...")
     sheet = create_character(client, settings, constraints)

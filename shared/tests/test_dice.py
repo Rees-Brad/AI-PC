@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from ai_pc.rules_engine.dnd5e.dice import roll
+from ai_pc_shared.rules_engine.dnd5e.dice import roll
 
 
 def test_roll_deterministic_with_seeded_rng():

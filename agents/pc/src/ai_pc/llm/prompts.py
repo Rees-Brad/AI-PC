@@ -1,4 +1,4 @@
-from ai_pc.character.sheet import CharacterSheet
+from ai_pc_shared.character.sheet import CharacterSheet
 
 BEHAVIOR_RULES = """\
 You are playing this character as a full autonomous player at a D&D 5e table, not \
@@ -25,9 +25,11 @@ def sheet_summary(sheet: CharacterSheet) -> str:
         f" ({sheet.gender}, {sheet.alignment})".strip(),
         f"Background: {sheet.background}" if sheet.background else "",
         f"HP: {sheet.current_hp}/{sheet.max_hp}  AC: {sheet.armor_class}",
-        f"Abilities: STR {sheet.abilities.strength} DEX {sheet.abilities.dexterity} "
-        f"CON {sheet.abilities.constitution} INT {sheet.abilities.intelligence} "
-        f"WIS {sheet.abilities.wisdom} CHA {sheet.abilities.charisma}",
+        (
+            f"Abilities: STR {sheet.abilities.strength} DEX {sheet.abilities.dexterity} "
+            f"CON {sheet.abilities.constitution} INT {sheet.abilities.intelligence} "
+            f"WIS {sheet.abilities.wisdom} CHA {sheet.abilities.charisma}"
+        ),
     ]
     if sheet.inventory:
         lines.append("Inventory: " + ", ".join(i.name for i in sheet.inventory))
