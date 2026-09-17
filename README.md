@@ -20,3 +20,8 @@ built on the same `shared/` infrastructure.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup and how to run
 tests/lint/type-checks locally.
+
+## License
+
+Proprietary - see [LICENSE](LICENSE). All rights reserved; this may
+change to an open-source license in the future.
