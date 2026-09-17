@@ -13,10 +13,11 @@ This is a monorepo. Today it holds:
 - **[`shared/`](shared/)** - infrastructure reused across agents:
   character/rules schema, persistence, the Anthropic client wrapper.
 
-Planned, not yet built: `agents/dm/` (Dungeon Master agent),
-`agents/notetaker/` (session notes/summaries), and possibly `agents/npc/`
-(non-player characters). They'll follow the same shape as `agents/pc/`,
-built on the same `shared/` infrastructure.
+Stubbed, not yet built: `agents/dm/` (Dungeon Master agent),
+`agents/npc/` (non-player characters), and `agents/scribe/` (session
+notes/summaries) - each currently just a placeholder `REQUIREMENTS.md`.
+They'll follow the same shape as `agents/pc/`, built on the same
+`shared/` infrastructure.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup and how to run
 tests/lint/type-checks locally.
