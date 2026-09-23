@@ -190,6 +190,24 @@ DM's ruling and moves on in-character with no pushback and no explanation of
 its own prior calculation. The rules engine exists to keep the AI's default
 play consistent and fast — never to contest the DM.
 
+### No metagaming from campaign memory
+
+The Scribe agent keeps one party-wide record and does not filter it per
+character (see `agents/scribe/REQUIREMENTS.md`). Its recaps may therefore
+describe events the AI PC's character never personally witnessed — a DM
+aside, a scene the party split away from, another character's private
+dealings.
+
+The AI PC is responsible for policing this itself: it may use campaign
+memory to stay consistent, but it acts only on what its character
+plausibly knows.
+
+When it is unsure whether its character witnessed something, it asks the
+Scribe rather than guessing — the Scribe answers which characters are
+aware of an event and whether they know it firsthand or secondhand. If
+that answer is unavailable or inconclusive, the AI PC plays as though its
+character does not know.
+
 ### Command access control
 
 - Read/query commands (`/sheet`, `/inventory`) are open to anyone at the
@@ -220,9 +238,13 @@ reconnects to the last known voice channel, resuming without requiring
 DM/owner intervention.
 
 **Continuity / summarization** — Long-term campaign memory is produced by
-the Scribe agent (`agents/notetaker/`), which ships alongside the PC agent
-in v1. Scribe writes session recaps to the shared `SessionSummary` table;
-the PC agent only reads from it — no direct agent-to-agent call needed.
+the Scribe agent (`agents/scribe/`), which ships **before** the PC agent —
+it has no dependencies of its own and is useful at a human-only table, so
+it is in place and proven before any PC agent needs continuity from it. Scribe owns a campaign-level database that the PC agent has **read-only**
+access to; Scribe writes session recaps there and the PC agent reads them.
+Each PC instance is configured with the path to that database (e.g.
+`AI_PC_CAMPAIGN_DB_PATH`). This is the one exception to Multi-instance
+isolation below — no direct agent-to-agent call is needed.
 Each session's LLM context is built from all prior session summaries (from
 Scribe) plus the raw session-log tail of the current, in-progress session.
 The PC agent does not generate its own summaries.
@@ -241,7 +263,13 @@ pattern in `.env.example`.
 deployment simultaneously (one per AI-played character). Each deployment
 is fully self-contained: its own Anthropic API key, own Discord bot
 token/application, own database file, and own session memory/state. No
-configuration, credentials, or storage is shared between instances.
+configuration, credentials, or character storage is shared between
+instances.
+
+The single exception is the campaign-level database owned by the Scribe
+agent (see Continuity / summarization above), which every PC agent in the
+campaign may read — but never write. Character state always stays private
+to its own instance.
 
 ## Startup & File Discovery
 
