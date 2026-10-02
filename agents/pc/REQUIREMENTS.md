@@ -7,6 +7,13 @@ autonomous player: it owns its own character sheet, rolls its own dice, and
 applies 5e rules itself — not just an in-fiction chat companion that a human
 still has to referee and track state for.
 
+**One boundary on that autonomy: battlefield position.** Remote tables get
+spatial awareness from a camera pointed at the board or from a VTT, and the
+AI PC has access to neither — Discord's bot API carries no video, and VTT
+integration is out of scope for v1. So the AI owns its sheet, its dice, and
+its rules math, but where things physically are is adjudicated by the DM.
+See Battlefield Awareness.
+
 ## Interfaces
 
 ### 1. Discord voice channel (primary)
@@ -70,6 +77,11 @@ remains the primary interface for actual gameplay.
 
 Noted for a future generalization, not built now: VTT platform integration
 (Roll20, Foundry), non-Discord text chat, other game systems besides D&D 5e.
+
+VTT integration is the eventual answer to Battlefield Awareness — a VTT is
+the one place exact positions already exist in machine-readable form, so
+reading from it would remove the DM's spatial adjudication burden rather
+than adding per-round work.
 
 
 ## Character Creation
@@ -189,6 +201,34 @@ DM overrules a spell's effect), the AI PC updates its state to match the
 DM's ruling and moves on in-character with no pushback and no explanation of
 its own prior calculation. The rules engine exists to keep the AI's default
 play consistent and fast — never to contest the DM.
+
+### Battlefield awareness
+
+The AI PC has no view of the battle map. It cannot see the camera a remote
+table points at the board, and it does not read VTT state in v1. Its
+spatial model is whatever the DM has narrated — approximate, incomplete,
+and often out of date.
+
+It plays accordingly:
+
+- **Declare intent, not precise movement.** The AI states what it wants to
+  achieve — "I close on the archer and swing" — rather than asserting exact
+  distances or grid squares. The DM rules on whether that is reachable this
+  turn, and the AI takes that ruling as final (see DM authority above).
+- **Track what it is told.** Distances, positions, and terrain the DM
+  states out loud are retained and used for the rest of the encounter,
+  until contradicted.
+- **Ask only when genuinely blocked.** If a decision hinges on a distance
+  or line of sight it was never given — whether a target is in range at
+  all, whether allies are caught in an AoE — it asks via the OOC exception.
+  It does not ask for confirmation of things it can reasonably assume.
+- **Never fabricate geometry.** The AI does not invent positions to justify
+  an action. Where it is unsure, it either asks or picks an action that
+  does not depend on the unknown.
+
+This is the one area where the DM referees on the AI's behalf. Everything
+downstream of position — attack rolls, damage, saves, spell effects — is
+still the AI's own to compute.
 
 ### No metagaming from campaign memory
 
