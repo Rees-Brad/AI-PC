@@ -10,12 +10,12 @@ target-version = "py310"
 select = ["E", "F", "I", "ISC"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["ai_campaign", "ai_pc", "ai_pc_shared"]
+known-first-party = ["ai_campaign", "ai_pc", "ai_pc_shared", "ai_scribe"]
 
 [tool.mypy]
 python_version = "3.10"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["shared/tests", "agents/pc/tests", "agents/campaign/tests"]
+testpaths = ["shared/tests", "agents/pc/tests", "agents/campaign/tests", "agents/scribe/tests"]
 asyncio_mode = "auto"
