@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from ai_campaign.prompts import build_system_prompt
 from ai_campaign.config import load_settings
+from ai_campaign.prompts import build_system_prompt
 from ai_campaign.server import CampaignApp
 
 

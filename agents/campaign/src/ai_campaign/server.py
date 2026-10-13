@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 from http import HTTPStatus
 from pathlib import Path
@@ -11,10 +10,9 @@ from typing import Any
 from urllib.parse import unquote
 from wsgiref.simple_server import make_server
 
-from ai_pc_shared.llm.client import make_client
-
 from ai_campaign.config import Settings, load_settings
 from ai_campaign.prompts import build_system_prompt
+from ai_pc_shared.llm.client import make_client
 
 MAX_PROPOSAL_BYTES = 1_000_000
 CAMPAIGN_TOOL = {
@@ -166,7 +164,10 @@ class CampaignApp:
                         {
                             "type": "tool_result",
                             "tool_use_id": tool_use.id,
-                            "content": "Proposal prepared for user review; files have not been written.",
+                            "content": (
+                                "Proposal prepared for user review; "
+                                "files have not been written."
+                            ),
                         }
                     ],
                 }
