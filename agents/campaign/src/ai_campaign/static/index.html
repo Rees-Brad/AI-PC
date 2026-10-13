@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campaign Studio</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      color-scheme: light;
+      --ink: #182b27;
+      --muted: #6b7974;
+      --paper: #f3f5ef;
+      --panel: #fffefa;
+      --line: #dbe2d8;
+      --forest: #21483d;
+      --forest-hover: #17382f;
+      --lime: #cfdd6a;
+      --coral: #c86f55;
+      --blue: #e6f0ed;
+      --shadow: 0 16px 48px rgb(23 49 41 / 8%);
+      font-family: 'Manrope', sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 12% 8%, rgb(207 221 106 / 24%), transparent 33rem),
+        radial-gradient(ellipse at 92% 92%, rgb(82 142 124 / 12%), transparent 36rem),
+        var(--paper);
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 292px minmax(0, 1fr); }
+    aside {
+      background: #f9faf5;
+      border-right: 1px solid var(--line);
+      padding: 28px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+      color: var(--forest); background: var(--lime); font-size: 20px; font-weight: 800;
+    }
+    .brand-title { font-size: 15px; font-weight: 800; letter-spacing: 0; }
+    .brand-sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .field-label, .section-label {
+      display: block; color: var(--muted); font-size: 10px; font-weight: 800;
+      letter-spacing: 0; text-transform: uppercase; margin: 0 0 9px;
+    }
+    .mode-list { display: grid; gap: 7px; }
+    .mode-button {
+      border: 1px solid transparent; background: transparent; color: var(--muted);
+      border-radius: 8px; text-align: left; padding: 11px 12px; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .mode-button:hover { background: #eef2e9; color: var(--ink); }
+    .mode-button[aria-pressed="true"] { color: var(--forest); background: #e7eee3; border-color: #d7e1ce; }
+    .mode-number { font: 11px 'DM Mono', monospace; opacity: .65; }
+    .field { margin-bottom: 17px; }
+    select, input[type="text"], input[type="file"], textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 7px; background: var(--panel);
+      color: var(--ink); padding: 10px 11px; font-size: 12px; outline: none;
+    }
+    select:focus, input:focus, textarea:focus { border-color: #7eaa98; box-shadow: 0 0 0 3px rgb(76 129 106 / 12%); }
+    input[type="file"] { padding: 8px; }
+    textarea { resize: vertical; min-height: 96px; line-height: 1.55; }
+    .helper { color: var(--muted); font-size: 11px; line-height: 1.5; margin-top: 7px; }
+    .context-panel { border-top: 1px solid var(--line); padding-top: 20px; }
+    .context-panel[hidden], .hidden { display: none !important; }
+    .local-note { margin-top: auto; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    main { min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100vh; }
+    .topbar {
+      min-height: 74px; padding: 16px 30px; border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      background: rgb(255 254 250 / 70%); backdrop-filter: blur(12px);
+    }
+    .page-title { margin: 0; font-size: 17px; font-weight: 800; }
+    .page-subtitle { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .connection { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .connection::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #79a581; }
+    .conversation { overflow-y: auto; padding: 28px max(24px, calc((100% - 850px) / 2)); scroll-behavior: smooth; }
+    .welcome { max-width: 680px; padding: 28px 0 24px; animation: rise .45s ease both; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--forest); font-size: 10px; text-transform: uppercase; font-weight: 800; }
+    .eyebrow::before { content: ''; width: 19px; height: 2px; background: var(--coral); }
+    .welcome h1 { font-size: clamp(28px, 4vw, 42px); letter-spacing: 0; line-height: 1.08; margin: 12px 0 11px; max-width: 600px; }
+    .welcome p { color: var(--muted); max-width: 560px; font-size: 13px; line-height: 1.7; margin: 0; }
+    .message { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; margin: 18px 0; max-width: 760px; animation: rise .25s ease both; }
+    .message.user { grid-template-columns: minmax(0, 1fr) 30px; margin-left: auto; }
+    .avatar { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: var(--lime); color: var(--forest); font-size: 11px; font-weight: 800; }
+    .user .avatar { order: 2; color: #fff; background: var(--forest); }
+    .bubble { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; font-size: 13px; padding: 12px 15px; border-radius: 4px 12px 12px 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 3px 12px rgb(29 55 46 / 3%); }
+    .user .bubble { background: var(--forest); border-color: var(--forest); color: white; border-radius: 12px 4px 12px 12px; }
+    .typing { color: var(--muted); font-size: 12px; padding: 9px 0; }
+    .proposal { max-width: 760px; margin: 20px 42px 28px; padding: 16px; border: 1px solid #cbd8ad; border-left: 4px solid var(--lime); border-radius: 8px; background: #fcfdf3; animation: rise .3s ease both; }
+    .proposal-head { display: flex; gap: 15px; justify-content: space-between; align-items: start; }
+    .proposal h2 { font-size: 13px; margin: 0 0 5px; }
+    .proposal p { color: var(--muted); font-size: 11px; margin: 0 0 12px; }
+    .file-preview { border-top: 1px solid #e4e9d2; padding-top: 9px; margin-top: 9px; }
+    .file-preview summary { cursor: pointer; color: var(--forest); font: 11px 'DM Mono', monospace; }
+    .file-preview pre { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #f1f3e8; padding: 10px; border-radius: 5px; font: 11px/1.55 'DM Mono', monospace; }
+    .apply-button, .send-button {
+      border: 0; border-radius: 7px; background: var(--forest); color: white; font-weight: 800;
+      padding: 10px 14px; font-size: 11px; transition: background .15s, transform .15s;
+    }
+    .apply-button:hover, .send-button:hover { background: var(--forest-hover); transform: translateY(-1px); }
+    .apply-button:disabled, .send-button:disabled { opacity: .5; cursor: wait; transform: none; }
+    .discard-button { border: 1px solid var(--line); background: transparent; border-radius: 7px; padding: 9px 12px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .composer-wrap { padding: 14px 24px 20px; }
+    .composer { max-width: 850px; margin: 0 auto; border: 1px solid #cbd5ca; border-radius: 10px; background: var(--panel); box-shadow: var(--shadow); padding: 11px; }
+    .composer textarea { display: block; min-height: 54px; max-height: 200px; border: 0; box-shadow: none; background: transparent; resize: vertical; font-size: 13px; }
+    .composer textarea:focus { box-shadow: none; }
+    .composer-foot { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px 0 8px; }
+    .key-hint { color: #8b9690; font-size: 10px; }
+    .status { color: var(--coral); font-size: 11px; min-height: 17px; padding: 4px 8px 0; }
+    @keyframes rise { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 760px) {
+      .app { grid-template-columns: 1fr; }
+      aside { border-right: 0; border-bottom: 1px solid var(--line); padding: 14px 16px; gap: 14px; }
+      .brand { display: none; }
+      .mode-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .mode-button { justify-content: center; padding: 9px 5px; font-size: 11px; }
+      .mode-number { display: none; }
+      aside > .field { margin: 0; }
+      .context-panel { padding-top: 12px; }
+      .local-note { display: none; }
+      main { height: min(78vh, 850px); min-height: 560px; }
+      .topbar { min-height: 58px; padding: 11px 16px; }
+      .conversation { padding: 14px 16px; }
+      .welcome { padding-top: 12px; }
+      .composer-wrap { padding: 10px 12px 12px; }
+      .proposal { margin-left: 0; margin-right: 0; }
+      .connection { font-size: 0; }
+      .connection::before { width: 8px; height: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">C</div>
+        <div><div class="brand-title">Campaign Studio</div><div class="brand-sub">A planner for the long story</div></div>
+      </div>
+
+      <section aria-labelledby="mode-label">
+        <h2 class="section-label" id="mode-label">Workspace</h2>
+        <div class="mode-list" role="group" aria-label="Operating mode">
+          <button class="mode-button" data-mode="review" aria-pressed="false">Review <span class="mode-number">01</span></button>
+          <button class="mode-button" data-mode="create" aria-pressed="true">Create <span class="mode-number">02</span></button>
+          <button class="mode-button" data-mode="update" aria-pressed="false">Update <span class="mode-number">03</span></button>
+        </div>
+      </section>
+
+      <div class="field" id="campaign-field">
+        <label class="field-label" for="campaign-select">Campaign folder</label>
+        <select id="campaign-select"><option value="">New campaign</option></select>
+        <input id="campaign-name" type="text" placeholder="Name for new campaign" autocomplete="off" style="margin-top:8px">
+        <div class="helper">Files stay in the configured local campaign directory.</div>
+      </div>
+
+      <section class="context-panel" id="review-panel" hidden>
+        <label class="field-label" for="review-file">Campaign document</label>
+        <input id="review-file" type="file">
+        <div class="helper" id="review-file-name">Choose a document to review. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.</div>
+      </section>
+
+      <section class="context-panel" id="update-panel" hidden>
+        <label class="field-label" for="session-record">Scribe session record</label>
+        <textarea id="session-record" placeholder="Paste the Scribe's recap or session record"></textarea>
+        <div class="helper">The Campaign Agent does not connect to Discord or query the Scribe directly.</div>
+      </section>
+
+      <div class="local-note">Local workspace<br>Campaign files are only written after you approve a proposal.</div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><h1 class="page-title" id="mode-title">Campaign Creation</h1><div class="page-subtitle" id="mode-subtitle">Build the story together, one chapter at a time.</div></div>
+        <div class="connection">Local interface · API calls online</div>
+      </header>
+
+      <section class="conversation" id="conversation" aria-live="polite" aria-label="Conversation">
+        <div class="welcome" id="welcome">
+          <div class="eyebrow">Campaign development</div>
+          <h1 id="welcome-title">Start with the story you want to tell.</h1>
+          <p id="welcome-copy">Share a premise, a goal, a setting, or just the image that started it. We can shape the campaign together; you decide what becomes canon.</p>
+        </div>
+      </section>
+
+      <div class="composer-wrap">
+        <form class="composer" id="chat-form">
+          <textarea id="message-input" aria-label="Message the Campaign Agent" placeholder="Write a message..." rows="2" required></textarea>
+          <div class="composer-foot"><span class="key-hint">Enter to send · Shift+Enter for a new line</span><button class="send-button" id="send-button" type="submit">Send message</button></div>
+          <div class="status" id="status" role="status"></div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const descriptions = {
+      review: ['Campaign Review', 'Read the material carefully and offer practical feedback.', 'A second set of eyes for the world you are building.', 'Choose a Markdown campaign document, then tell me what kind of feedback would help. I will review it without changing or creating campaign files.'],
+      create: ['Campaign Creation', 'Build the story together, one chapter at a time.', 'Start with the story you want to tell.', 'Share a premise, a goal, a setting, or just the image that started it. We can shape the campaign together; you decide what becomes canon.'],
+      update: ['Campaign Update', 'Use what happened to shape what comes next.', 'Pick up the story where the table left it.', 'Paste the Scribe recap in the left panel, then tell me how you want to carry the campaign forward. XP, level-ups, rulings, and future story changes remain subject to your DM’s confirmation.']
+    };
+    const conversation = document.querySelector('#conversation');
+    const welcome = document.querySelector('#welcome');
+    const messageInput = document.querySelector('#message-input');
+    const sendButton = document.querySelector('#send-button');
+    const status = document.querySelector('#status');
+    const campaignSelect = document.querySelector('#campaign-select');
+    const campaignName = document.querySelector('#campaign-name');
+    const reviewFile = document.querySelector('#review-file');
+    const sessionRecord = document.querySelector('#session-record');
+    let mode = 'create';
+    let messages = [];
+    let pendingProposal = null;
+    let maxContextBytes = 500 * 1024;
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      messages = [];
+      discardProposal();
+      document.querySelectorAll('.mode-button').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
+      });
+      document.querySelector('#mode-title').textContent = descriptions[mode][0];
+      document.querySelector('#mode-subtitle').textContent = descriptions[mode][1];
+      document.querySelector('#welcome-title').textContent = descriptions[mode][2];
+      document.querySelector('#welcome-copy').textContent = descriptions[mode][3];
+      document.querySelector('#review-panel').hidden = mode !== 'review';
+      document.querySelector('#update-panel').hidden = mode !== 'update';
+      document.querySelector('#campaign-field').classList.toggle('hidden', mode === 'review');
+      [...conversation.querySelectorAll('.message, .proposal, .typing')].forEach(node => node.remove());
+      status.textContent = '';
+    }
+
+    function addMessage(role, content) {
+      welcome.classList.add('hidden');
+      const row = document.createElement('div');
+      row.className = `message ${role}`;
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.textContent = role === 'user' ? 'You' : 'CA';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = content;
+      row.append(avatar, bubble);
+      conversation.append(row);
+      conversation.scrollTop = conversation.scrollHeight;
+    }
+
+    function showProposal(proposal) {
+      discardProposal();
+      if (!proposal || !proposal.files?.length) return;
+      pendingProposal = proposal;
+      const panel = document.createElement('section');
+      panel.className = 'proposal';
+      panel.id = 'proposal-panel';
+      const head = document.createElement('div');
+      head.className = 'proposal-head';
+      const title = document.createElement('div');
+      const heading = document.createElement('h2');
+      heading.textContent = 'Proposed campaign files';
+      const summary = document.createElement('p');
+      summary.textContent = proposal.summary || 'Review each file before applying.';
+      title.append(heading, summary);
+      const actions = document.createElement('div');
+      actions.style.display = 'flex';
+      actions.style.gap = '7px';
+      const discard = document.createElement('button');
+      discard.type = 'button'; discard.className = 'discard-button'; discard.textContent = 'Discard';
+      discard.addEventListener('click', discardProposal);
+      const apply = document.createElement('button');
+      apply.type = 'button'; apply.className = 'apply-button'; apply.textContent = 'Apply files';
+      apply.addEventListener('click', applyProposal);
+      actions.append(discard, apply); head.append(title, actions); panel.append(head);
+      proposal.files.forEach(file => {
+        const details = document.createElement('details');
+        details.className = 'file-preview';
+        const summary = document.createElement('summary'); summary.textContent = file.path;
+        const content = document.createElement('pre'); content.textContent = file.content;
+        details.append(summary, content); panel.append(details);
+      });
+      conversation.append(panel);
+      conversation.scrollTop = conversation.scrollHeight;
+    }
+
+    function discardProposal() {
+      document.querySelector('#proposal-panel')?.remove();
+      pendingProposal = null;
+    }
+
+    async function applyProposal(event) {
+      const button = event.currentTarget;
+      const selected = campaignSelect.value;
+      const name = selected || campaignName.value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, '');
+      if (!name) { status.textContent = 'Enter a name for this campaign first.'; campaignName.focus(); return; }
+      button.disabled = true;
+      status.textContent = 'Applying approved files…';
+      try {
+        const response = await fetch('/api/apply', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({mode, campaign: name, files: pendingProposal.files})
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not apply files.');
+        campaignName.value = name;
+        await loadCampaigns(name);
+        addMessage('assistant', `Applied ${result.written.length} file${result.written.length === 1 ? '' : 's'} to ${name}:\n${result.written.join('\n')}`);
+        discardProposal();
+        status.textContent = 'Approved files saved.';
+      } catch (error) { status.textContent = error.message; button.disabled = false; }
+    }
+
+    async function readReviewDocument() {
+      const file = reviewFile.files?.[0];
+      if (!file) return '';
+      if (file.size > maxContextBytes) {
+        throw new Error(`Review documents must be ${Math.floor(maxContextBytes / 1024)} KB or smaller.`);
+      }
+      const textExtensions = ['.md', '.markdown', '.txt', '.text', '.rst', '.csv', '.json', '.yaml', '.yml', '.html', '.htm'];
+      const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+      if (!textExtensions.includes(extension) && !file.type.startsWith('text/')) {
+        throw new Error('This file can be selected, but only text-based documents can be reviewed. Use Markdown, TXT, RST, CSV, JSON, YAML, or HTML.');
+      }
+      return await file.text();
+    }
+
+    document.querySelectorAll('.mode-button').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
+    document.querySelector('#chat-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text || sendButton.disabled) return;
+      try {
+        const reviewDocument = mode === 'review' ? await readReviewDocument() : '';
+        const campaign = mode === 'review' ? '' : (campaignSelect.value || campaignName.value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, ''));
+        if (mode !== 'review' && campaign) campaignName.value = campaign;
+        const requestMessages = [...messages, {role: 'user', content: text}];
+        addMessage('user', text);
+        messageInput.value = '';
+        sendButton.disabled = true;
+        status.textContent = 'Thinking…';
+        const response = await fetch('/api/chat', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({mode, campaign, messages: requestMessages, review_document: reviewDocument, session_record: mode === 'update' ? sessionRecord.value : ''})
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'The request failed.');
+        messages = [...requestMessages, {role: 'assistant', content: result.reply}];
+        addMessage('assistant', result.reply);
+        showProposal(result.proposal);
+        status.textContent = '';
+      } catch (error) { status.textContent = error.message; }
+      finally { sendButton.disabled = false; messageInput.focus(); }
+    });
+    messageInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); document.querySelector('#chat-form').requestSubmit(); }
+    });
+    reviewFile.addEventListener('change', () => {
+      document.querySelector('#review-file-name').textContent = reviewFile.files?.[0]?.name || 'Choose a document to review. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.';
+    });
+
+    async function loadCampaigns(selectName = '') {
+      try {
+        const response = await fetch('/api/campaigns');
+        const data = await response.json();
+        campaignSelect.replaceChildren(new Option('New campaign', ''));
+        data.campaigns.forEach(name => campaignSelect.add(new Option(name, name)));
+        if (selectName && data.campaigns.includes(selectName)) {
+          campaignSelect.value = selectName; campaignName.value = '';
+        }
+      } catch { status.textContent = 'Could not load campaign folders.'; }
+    }
+    async function loadConfig() {
+      try {
+        const response = await fetch('/api/config');
+        const config = await response.json();
+        if (response.ok && Number.isInteger(config.max_context_bytes) && config.max_context_bytes > 0) {
+          maxContextBytes = config.max_context_bytes;
+          document.querySelector('#review-file-name').textContent = `Choose a document to review, up to ${Math.floor(maxContextBytes / 1024)} KB. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.`;
+        }
+      } catch { /* Keep the default label if config cannot be fetched. */ }
+    }
+    campaignSelect.addEventListener('change', () => {
+      if (campaignSelect.value) campaignName.value = '';
+      else campaignName.focus();
+    });
+    loadCampaigns();
+    loadConfig();
+  </script>
+</body>
+</html>
