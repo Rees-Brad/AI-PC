@@ -1,0 +1,22 @@
+[project]
+name = "ai-pc-agent-campaign"
+version = "0.1.0"
+description = "Local web-based D&D campaign planning agent"
+requires-python = ">=3.10"
+dependencies = [
+    "ai-pc-shared",
+    "anthropic>=0.40",
+]
+
+[project.scripts]
+ai-campaign = "ai_campaign.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+ai_campaign = ["static/*.html"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
