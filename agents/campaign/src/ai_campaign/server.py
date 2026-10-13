@@ -13,10 +13,9 @@ from wsgiref.simple_server import make_server
 
 from ai_pc_shared.llm.client import make_client
 
+from ai_campaign.config import Settings, load_settings
 from ai_campaign.prompts import build_system_prompt
 
-MAX_REQUEST_BYTES = 1_000_000
-MAX_CAMPAIGN_BYTES = 100_000
 MAX_PROPOSAL_BYTES = 1_000_000
 CAMPAIGN_TOOL = {
     "name": "propose_campaign_files",
@@ -46,12 +45,13 @@ CAMPAIGN_TOOL = {
 
 
 class CampaignApp:
-    def __init__(self) -> None:
-        self.campaign_root = Path(
-            os.environ.get("AI_CAMPAIGN_ROOT", "~/ai-pc-campaigns")
-        ).expanduser().resolve()
+    def __init__(self, settings: Settings | None = None) -> None:
+        self.settings = settings or load_settings()
+        self.campaign_root = self.settings.ai_campaign_root.expanduser().resolve()
         self.campaign_root.mkdir(parents=True, exist_ok=True)
-        self.model = os.environ.get("AI_CAMPAIGN_MODEL", "claude-sonnet-4-5")
+        self.model = self.settings.ai_campaign_model
+        self.max_context_bytes = self.settings.ai_campaign_max_context_kb * 1024
+        self.max_request_bytes = max(1_000_000, self.max_context_bytes * 4 + 1_000_000)
 
     def __call__(self, environ: dict[str, Any], start_response: Any) -> list[bytes]:
         method = environ["REQUEST_METHOD"]
@@ -69,6 +69,12 @@ class CampaignApp:
                     if child.is_dir() and not child.is_symlink()
                 )
                 return self._json(start_response, HTTPStatus.OK, {"campaigns": campaigns})
+            if method == "GET" and path == "/api/config":
+                return self._json(
+                    start_response,
+                    HTTPStatus.OK,
+                    {"max_context_bytes": self.max_context_bytes},
+                )
             if method == "POST" and path == "/api/chat":
                 payload = self._read_json(environ)
                 result = self.chat(payload)
@@ -88,13 +94,12 @@ class CampaignApp:
             )
 
     def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
-        if not os.environ.get("ANTHROPIC_API_KEY") and not os.environ.get(
-            "ANTHROPIC_AUTH_TOKEN"
-        ):
+        if not self.settings.anthropic_api_key:
             raise ValueError(
-                "Anthropic authentication is not configured. Set ANTHROPIC_API_KEY "
-                "in the terminal that starts the Campaign Agent, then restart the "
-                "server. Do not enter the key in this chat."
+                "Anthropic authentication is not configured. Add ANTHROPIC_API_KEY "
+                "to the Campaign Agent .env file, or set AI_CAMPAIGN_ENV_FILE to "
+                "the path of an existing .env file, then restart the server. Do "
+                "not enter the key in this chat."
             )
 
         mode = payload.get("mode")
@@ -120,8 +125,14 @@ class CampaignApp:
         session_record = payload.get("session_record", "")
         if not all(isinstance(value, str) for value in (review_document, session_record)):
             raise ValueError("Review documents and session records must be text.")
-        if len(review_document) + len(session_record) > MAX_CAMPAIGN_BYTES:
-            raise ValueError("Supplied campaign material exceeds the 100 KB limit.")
+        supplied_context_bytes = len(review_document.encode("utf-8")) + len(
+            session_record.encode("utf-8")
+        )
+        if supplied_context_bytes > self.max_context_bytes:
+            limit_kb = self.settings.ai_campaign_max_context_kb
+            raise ValueError(
+                f"Supplied campaign material exceeds the {limit_kb} KB limit."
+            )
 
         system = build_system_prompt(
             mode=mode,
@@ -139,7 +150,7 @@ class CampaignApp:
         if mode in {"create", "update"}:
             kwargs["tools"] = [CAMPAIGN_TOOL]
 
-        client = make_client()
+        client = make_client(api_key=self.settings.anthropic_api_key)
         response = client.messages.create(**kwargs)
         proposal = None
         tool_use = next(
@@ -216,7 +227,7 @@ class CampaignApp:
             if path.is_symlink():
                 continue
             content = path.read_text(encoding="utf-8")
-            remaining = MAX_CAMPAIGN_BYTES - total
+            remaining = self.max_context_bytes - total
             if remaining <= 0:
                 break
             content = content[:remaining]
@@ -267,14 +278,14 @@ class CampaignApp:
             raise ValueError("The proposed files exceed the 1 MB limit.")
         return {"summary": str(value.get("summary", "")), "files": files}
 
-    @staticmethod
-    def _read_json(environ: dict[str, Any]) -> dict[str, Any]:
+    def _read_json(self, environ: dict[str, Any]) -> dict[str, Any]:
         try:
             length = int(environ.get("CONTENT_LENGTH") or 0)
         except ValueError as error:
             raise ValueError("Invalid request size.") from error
-        if length < 1 or length > MAX_REQUEST_BYTES:
-            raise ValueError("Request must be between 1 byte and 1 MB.")
+        if length < 1 or length > self.max_request_bytes:
+            limit_mb = self.max_request_bytes / 1_000_000
+            raise ValueError(f"Request must be between 1 byte and {limit_mb:g} MB.")
         try:
             payload = json.loads(environ["wsgi.input"].read(length))
         except (json.JSONDecodeError, UnicodeDecodeError) as error:
@@ -308,9 +319,10 @@ class CampaignApp:
 
 
 def main() -> None:
-    app = CampaignApp()
-    address = os.environ.get("AI_CAMPAIGN_HOST", "127.0.0.1")
-    port = int(os.environ.get("AI_CAMPAIGN_PORT", "8765"))
+    settings = load_settings()
+    app = CampaignApp(settings)
+    address = settings.ai_campaign_host
+    port = settings.ai_campaign_port
     with make_server(address, port, app) as server:
         print(f"Campaign Agent ready at http://{address}:{port}")
         server.serve_forever()

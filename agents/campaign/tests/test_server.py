@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from ai_campaign.prompts import build_system_prompt
+from ai_campaign.config import load_settings
 from ai_campaign.server import CampaignApp
 
 
@@ -13,7 +14,12 @@ from ai_campaign.server import CampaignApp
 def app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> CampaignApp:
     monkeypatch.setenv("AI_CAMPAIGN_ROOT", str(tmp_path / "campaigns"))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("AI_CAMPAIGN_MAX_CONTEXT_KB", "500")
     return CampaignApp()
+
+
+def test_context_limit_uses_configured_kilobytes(app: CampaignApp) -> None:
+    assert app.max_context_bytes == 500 * 1024
 
 
 def test_reviewer_prompt_is_read_only() -> None:
@@ -27,15 +33,48 @@ def test_chat_explains_missing_anthropic_credentials(
     app: CampaignApp, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    app.settings.anthropic_api_key = ""
 
-    with pytest.raises(ValueError, match="Set ANTHROPIC_API_KEY.*restart the server"):
+    with pytest.raises(
+        ValueError, match="Add ANTHROPIC_API_KEY.*restart the server"
+    ):
         app.chat(
             {
                 "mode": "review",
                 "messages": [{"role": "user", "content": "Review this."}],
             }
         )
+
+
+def test_loads_credentials_from_configured_env_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_file = tmp_path / "campaign.env"
+    env_file.write_text("ANTHROPIC_API_KEY=loaded-from-file\n", encoding="utf-8")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("AI_CAMPAIGN_ENV_FILE", str(env_file))
+
+    settings = load_settings()
+
+    assert settings.anthropic_api_key == "loaded-from-file"
+
+
+def test_defaults_to_campaign_instance_env_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    campaign_dir = tmp_path / "ai-pc-campaigns"
+    campaign_dir.mkdir()
+    (campaign_dir / ".env").write_text(
+        "ANTHROPIC_API_KEY=campaign-instance-key\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("AI_CAMPAIGN_ENV_FILE", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    settings = load_settings()
+
+    assert settings.anthropic_api_key == "campaign-instance-key"
+    assert settings.ai_campaign_root == Path("~/ai-pc-campaigns")
 
 
 def test_update_prompt_does_not_claim_scribe_connection() -> None:
@@ -58,7 +97,7 @@ def test_reviewer_chat_does_not_offer_file_tool(
 
     monkeypatch.setattr(
         "ai_campaign.server.make_client",
-        lambda: SimpleNamespace(messages=FakeMessages()),
+        lambda **kwargs: SimpleNamespace(messages=FakeMessages()),
     )
 
     result = app.chat(
@@ -105,7 +144,7 @@ def test_campaign_chat_returns_proposal_without_writing_files(
     fake_messages = FakeMessages()
     monkeypatch.setattr(
         "ai_campaign.server.make_client",
-        lambda: SimpleNamespace(messages=fake_messages),
+        lambda **kwargs: SimpleNamespace(messages=fake_messages),
     )
 
     result = app.chat(

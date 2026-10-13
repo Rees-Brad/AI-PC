@@ -170,8 +170,8 @@
 
       <section class="context-panel" id="review-panel" hidden>
         <label class="field-label" for="review-file">Campaign document</label>
-        <input id="review-file" type="file" accept=".md,.markdown,.txt,text/plain,text/markdown">
-        <div class="helper" id="review-file-name">Choose a document to review. It is not uploaded to disk.</div>
+        <input id="review-file" type="file">
+        <div class="helper" id="review-file-name">Choose a document to review. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.</div>
       </section>
 
       <section class="context-panel" id="update-panel" hidden>
@@ -225,6 +225,7 @@
     let mode = 'create';
     let messages = [];
     let pendingProposal = null;
+    let maxContextBytes = 500 * 1024;
 
     function setMode(nextMode) {
       mode = nextMode;
@@ -325,7 +326,14 @@
     async function readReviewDocument() {
       const file = reviewFile.files?.[0];
       if (!file) return '';
-      if (file.size > 100000) throw new Error('Review documents must be 100 KB or smaller.');
+      if (file.size > maxContextBytes) {
+        throw new Error(`Review documents must be ${Math.floor(maxContextBytes / 1024)} KB or smaller.`);
+      }
+      const textExtensions = ['.md', '.markdown', '.txt', '.text', '.rst', '.csv', '.json', '.yaml', '.yml', '.html', '.htm'];
+      const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+      if (!textExtensions.includes(extension) && !file.type.startsWith('text/')) {
+        throw new Error('This file can be selected, but only text-based documents can be reviewed. Use Markdown, TXT, RST, CSV, JSON, YAML, or HTML.');
+      }
       return await file.text();
     }
 
@@ -360,7 +368,7 @@
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); document.querySelector('#chat-form').requestSubmit(); }
     });
     reviewFile.addEventListener('change', () => {
-      document.querySelector('#review-file-name').textContent = reviewFile.files?.[0]?.name || 'Choose a document to review. It is not uploaded to disk.';
+      document.querySelector('#review-file-name').textContent = reviewFile.files?.[0]?.name || 'Choose a document to review. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.';
     });
 
     async function loadCampaigns(selectName = '') {
@@ -374,11 +382,22 @@
         }
       } catch { status.textContent = 'Could not load campaign folders.'; }
     }
+    async function loadConfig() {
+      try {
+        const response = await fetch('/api/config');
+        const config = await response.json();
+        if (response.ok && Number.isInteger(config.max_context_bytes) && config.max_context_bytes > 0) {
+          maxContextBytes = config.max_context_bytes;
+          document.querySelector('#review-file-name').textContent = `Choose a document to review, up to ${Math.floor(maxContextBytes / 1024)} KB. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.`;
+        }
+      } catch { /* Keep the default label if config cannot be fetched. */ }
+    }
     campaignSelect.addEventListener('change', () => {
       if (campaignSelect.value) campaignName.value = '';
       else campaignName.focus();
     });
     loadCampaigns();
+    loadConfig();
   </script>
 </body>
 </html>
