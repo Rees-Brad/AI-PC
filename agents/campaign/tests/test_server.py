@@ -12,6 +12,7 @@ from ai_campaign.server import CampaignApp
 @pytest.fixture
 def app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> CampaignApp:
     monkeypatch.setenv("AI_CAMPAIGN_ROOT", str(tmp_path / "campaigns"))
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     return CampaignApp()
 
 
@@ -20,6 +21,21 @@ def test_reviewer_prompt_is_read_only() -> None:
 
     assert "Do not create" in prompt
     assert "reference data" in prompt
+
+
+def test_chat_explains_missing_anthropic_credentials(
+    app: CampaignApp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+
+    with pytest.raises(ValueError, match="Set ANTHROPIC_API_KEY.*restart the server"):
+        app.chat(
+            {
+                "mode": "review",
+                "messages": [{"role": "user", "content": "Review this."}],
+            }
+        )
 
 
 def test_update_prompt_does_not_claim_scribe_connection() -> None:
@@ -32,6 +48,7 @@ def test_update_prompt_does_not_claim_scribe_connection() -> None:
 def test_reviewer_chat_does_not_offer_file_tool(
     app: CampaignApp, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     calls: list[dict] = []
 
     class FakeMessages:

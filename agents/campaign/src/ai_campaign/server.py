@@ -88,6 +88,15 @@ class CampaignApp:
             )
 
     def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if not os.environ.get("ANTHROPIC_API_KEY") and not os.environ.get(
+            "ANTHROPIC_AUTH_TOKEN"
+        ):
+            raise ValueError(
+                "Anthropic authentication is not configured. Set ANTHROPIC_API_KEY "
+                "in the terminal that starts the Campaign Agent, then restart the "
+                "server. Do not enter the key in this chat."
+            )
+
         mode = payload.get("mode")
         if mode not in {"review", "create", "update"}:
             raise ValueError("Choose Reviewer, Campaign Creation, or Update mode.")
