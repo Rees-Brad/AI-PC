@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from base64 import b64encode
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,6 +9,42 @@ import pytest
 from ai_campaign.config import load_settings
 from ai_campaign.prompts import build_system_prompt
 from ai_campaign.server import CampaignApp
+
+
+def make_pdf(text: str) -> bytes:
+    content = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode("ascii")
+    stream = (
+        b"<< /Length "
+        + str(len(content)).encode("ascii")
+        + b" >>\nstream\n"
+        + content
+        + b"\nendstream"
+    )
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>"
+        ),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        stream,
+    ]
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for index, item in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{index} 0 obj\n".encode("ascii") + item + b"\nendobj\n")
+    xref_offset = len(pdf)
+    pdf.extend(b"xref\n0 6\n0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(
+        f"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode(
+            "ascii"
+        )
+    )
+    return bytes(pdf)
 
 
 @pytest.fixture
@@ -27,6 +64,127 @@ def test_reviewer_prompt_is_read_only() -> None:
 
     assert "Do not create" in prompt
     assert "reference data" in prompt
+
+
+def test_reviewer_prompt_explains_pdf_text_support() -> None:
+    prompt = build_system_prompt(mode="review")
+
+    assert "Markdown, TXT, RST, CSV, JSON, YAML, HTML" in prompt
+    assert "extract selectable text from PDF" in prompt
+    assert "scanned PDFs without" in prompt
+
+
+def test_create_prompt_scaffolds_independent_campaign_sections() -> None:
+    prompt = " ".join(build_system_prompt(mode="create").split())
+
+    assert "When asked to create the campaign structure or scaffold" in prompt
+    assert "a separate file for each section" in prompt
+    assert "Do not combine the campaign, chapters, adventures, and encounters" in prompt
+    assert "put all proposed files in the files array" in prompt
+
+
+def test_reviewer_chat_extracts_pdf_text(
+    app: CampaignApp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    extracted_text = "The masked ball takes place at midnight."
+    pdf_bytes = make_pdf(extracted_text)
+
+    calls: list[dict] = []
+
+    class FakeMessages:
+        def create(self, **kwargs: dict) -> SimpleNamespace:
+            calls.append(kwargs)
+            return SimpleNamespace(
+                content=[SimpleNamespace(type="text", text="Review")]
+            )
+
+    monkeypatch.setattr(
+        "ai_campaign.server.make_client",
+        lambda **kwargs: SimpleNamespace(messages=FakeMessages()),
+    )
+
+    app.chat(
+        {
+            "mode": "review",
+            "messages": [{"role": "user", "content": "Review the PDF."}],
+            "review_document_pdf_base64": b64encode(pdf_bytes).decode("ascii"),
+        }
+    )
+
+    assert extracted_text in calls[0]["system"]
+
+
+def test_create_chat_includes_starting_material(
+    app: CampaignApp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[dict] = []
+
+    class FakeMessages:
+        def create(self, **kwargs: dict) -> SimpleNamespace:
+            calls.append(kwargs)
+            return SimpleNamespace(
+                content=[SimpleNamespace(type="text", text="Let's build from that.")]
+            )
+
+    monkeypatch.setattr(
+        "ai_campaign.server.make_client",
+        lambda **kwargs: SimpleNamespace(messages=FakeMessages()),
+    )
+
+    app.chat(
+        {
+            "mode": "create",
+            "messages": [{"role": "user", "content": "Help develop this."}],
+            "starting_document": "A coastal city built around a sleeping leviathan.",
+        }
+    )
+
+    assert "A coastal city built around a sleeping leviathan." in calls[0]["system"]
+    assert "starting_material" in calls[0]["system"]
+
+
+def test_create_chat_loads_existing_campaign_from_selected_directory(
+    app: CampaignApp, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    campaign_root = tmp_path / "alternate-campaigns"
+    campaign_dir = campaign_root / "mist-coast"
+    campaign_dir.mkdir(parents=True)
+    (campaign_dir / "campaign.md").write_text("# The Mist Coast", encoding="utf-8")
+    calls: list[dict] = []
+
+    class FakeMessages:
+        def create(self, **kwargs: dict) -> SimpleNamespace:
+            calls.append(kwargs)
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text="Ready")])
+
+    monkeypatch.setattr(
+        "ai_campaign.server.make_client",
+        lambda **kwargs: SimpleNamespace(messages=FakeMessages()),
+    )
+
+    app.chat(
+        {
+            "mode": "create",
+            "campaign": "mist-coast",
+            "campaign_root": str(campaign_root),
+            "messages": [{"role": "user", "content": "Continue this campaign."}],
+        }
+    )
+
+    assert "# The Mist Coast" in calls[0]["system"]
+
+
+def test_reviewer_chat_explains_image_only_pdf_limit(
+    app: CampaignApp,
+) -> None:
+    with pytest.raises(ValueError, match="Scanned PDFs need OCR"):
+        app.chat(
+            {
+                "mode": "review",
+                "messages": [{"role": "user", "content": "Review the PDF."}],
+                "review_document_pdf_base64": b64encode(make_pdf("")).decode("ascii"),
+            }
+        )
 
 
 def test_chat_explains_missing_anthropic_credentials(
@@ -119,9 +277,11 @@ def test_campaign_chat_returns_proposal_without_writing_files(
     class FakeMessages:
         def __init__(self) -> None:
             self.calls = 0
+            self.last_kwargs: dict = {}
 
         def create(self, **kwargs: dict) -> SimpleNamespace:
             self.calls += 1
+            self.last_kwargs = kwargs
             if self.calls == 1:
                 return SimpleNamespace(
                     content=[
@@ -155,9 +315,20 @@ def test_campaign_chat_returns_proposal_without_writing_files(
         }
     )
 
-    assert result["reply"] == "Review the proposed file."
+    assert result["reply"] == (
+        "Proposal prepared for your review. Start the campaign outline. "
+        "The files have not been written."
+    )
     assert result["proposal"]["files"] == [
         {"path": "campaign.md", "content": "# New Campaign\n"}
+    ]
+    assert fake_messages.calls == 1
+    tool = fake_messages.last_kwargs["tools"][0]
+    assert tool["strict"] is True
+    assert tool["input_schema"]["required"] == ["summary", "files"]
+    assert tool["input_schema"]["properties"]["files"]["items"]["required"] == [
+        "path",
+        "content",
     ]
     assert not (app.campaign_root / "new-campaign" / "campaign.md").exists()
 
@@ -175,6 +346,27 @@ def test_applies_approved_markdown_proposal(app: CampaignApp) -> None:
     assert (app.campaign_root / "green-hollow" / "campaign.md").read_text() == (
         "# Green Hollow\n"
     )
+
+
+def test_applies_campaign_to_selected_directory(app: CampaignApp, tmp_path: Path) -> None:
+    campaign_root = tmp_path / "chosen-location"
+
+    result = app.apply_proposal(
+        {
+            "mode": "create",
+            "campaign": "starfall",
+            "campaign_root": str(campaign_root),
+            "files": [{"path": "campaign.md", "content": "# Starfall\n"}],
+        }
+    )
+
+    assert result == {"written": ["campaign.md"]}
+    assert (campaign_root / "starfall" / "campaign.md").read_text() == "# Starfall\n"
+
+
+def test_campaign_directory_must_be_absolute(app: CampaignApp) -> None:
+    with pytest.raises(ValueError, match="must be an absolute path"):
+        app._resolve_campaign_root("campaigns")
 
 
 @pytest.mark.parametrize(
@@ -196,6 +388,22 @@ def test_rejects_unsafe_proposal_paths(
                 "files": [{"path": file_path, "content": "not safe"}],
             }
         )
+
+
+@pytest.mark.parametrize(
+    "proposal, message",
+    [
+        (None, "was not an object"),
+        ({"summary": "No files"}, "must include a 'files' array"),
+        ({"summary": "Wrong type", "files": {}}, "must include a 'files' array"),
+        ({"summary": "Empty", "files": []}, "between 1 and 50 files"),
+    ],
+)
+def test_invalid_proposal_reports_structural_problem(
+    proposal: object, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        CampaignApp._validate_proposal(proposal)
 
 
 def test_rejects_reviewer_file_writes(app: CampaignApp) -> None:

@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 dependencies = [
     "ai-pc-shared",
     "anthropic>=0.40",
+    "pypdf>=5",
     "pydantic-settings>=2.2",
 ]
 
