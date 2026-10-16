@@ -162,16 +162,19 @@
       </section>
 
       <div class="field" id="campaign-field">
-        <label class="field-label" for="campaign-select">Campaign folder</label>
+        <label class="field-label" for="campaign-root">Campaign directory</label>
+        <input id="campaign-root" type="text" placeholder="/path/to/campaigns" autocomplete="off">
+        <div class="helper">Choose where campaign folders are stored. This path is saved in this browser.</div>
+        <label class="field-label" id="campaign-select-label" for="campaign-select" style="margin-top:12px">Continue an existing campaign</label>
         <select id="campaign-select"><option value="">New campaign</option></select>
         <input id="campaign-name" type="text" placeholder="Name for new campaign" autocomplete="off" style="margin-top:8px">
-        <div class="helper">Files stay in the configured local campaign directory.</div>
+        <div class="helper" id="campaign-selection-help">Select a campaign to continue from its saved Markdown; approved updates return to that folder.</div>
       </div>
 
-      <section class="context-panel" id="review-panel" hidden>
-        <label class="field-label" for="review-file">Campaign document</label>
-        <input id="review-file" type="file">
-        <div class="helper" id="review-file-name">Choose a document to review. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.</div>
+      <section class="context-panel" id="material-panel">
+        <label class="field-label" id="material-label" for="review-file">Starting material</label>
+        <input id="review-file" type="file" accept=".pdf,application/pdf,.md,.markdown,.txt,.text,.rst,.csv,.json,.yaml,.yml,.html,.htm,text/plain,text/markdown">
+        <div class="helper" id="review-file-name">Optionally add notes or a text/PDF source document to guide campaign creation. PDFs need selectable text.</div>
       </section>
 
       <section class="context-panel" id="update-panel" hidden>
@@ -209,7 +212,7 @@
 
   <script>
     const descriptions = {
-      review: ['Campaign Review', 'Read the material carefully and offer practical feedback.', 'A second set of eyes for the world you are building.', 'Choose a Markdown campaign document, then tell me what kind of feedback would help. I will review it without changing or creating campaign files.'],
+      review: ['Campaign Review', 'Read the material carefully and offer practical feedback.', 'A second set of eyes for the world you are building.', 'Choose a text document or PDF with selectable text, then tell me what kind of feedback would help. I will review it without changing or creating campaign files.'],
       create: ['Campaign Creation', 'Build the story together, one chapter at a time.', 'Start with the story you want to tell.', 'Share a premise, a goal, a setting, or just the image that started it. We can shape the campaign together; you decide what becomes canon.'],
       update: ['Campaign Update', 'Use what happened to shape what comes next.', 'Pick up the story where the table left it.', 'Paste the Scribe recap in the left panel, then tell me how you want to carry the campaign forward. XP, level-ups, rulings, and future story changes remain subject to your DM’s confirmation.']
     };
@@ -220,12 +223,20 @@
     const status = document.querySelector('#status');
     const campaignSelect = document.querySelector('#campaign-select');
     const campaignName = document.querySelector('#campaign-name');
+    const campaignRootInput = document.querySelector('#campaign-root');
     const reviewFile = document.querySelector('#review-file');
     const sessionRecord = document.querySelector('#session-record');
     let mode = 'create';
     let messages = [];
     let pendingProposal = null;
     let maxContextBytes = 500 * 1024;
+
+    function updateMaterialHelper() {
+      const limit = `up to ${Math.floor(maxContextBytes / 1024)} KB`;
+      document.querySelector('#review-file-name').textContent = mode === 'review'
+        ? `Choose a document to review, ${limit}. Text files and PDFs with selectable text are supported; scanned PDFs need OCR.`
+        : `Optionally add notes or a text/PDF source document, ${limit}, to guide campaign creation. PDFs need selectable text.`;
+    }
 
     function setMode(nextMode) {
       mode = nextMode;
@@ -238,9 +249,17 @@
       document.querySelector('#mode-subtitle').textContent = descriptions[mode][1];
       document.querySelector('#welcome-title').textContent = descriptions[mode][2];
       document.querySelector('#welcome-copy').textContent = descriptions[mode][3];
-      document.querySelector('#review-panel').hidden = mode !== 'review';
+      document.querySelector('#material-panel').hidden = !['review', 'create'].includes(mode);
+      document.querySelector('#material-label').textContent = mode === 'review' ? 'Campaign document' : 'Starting material';
+      updateMaterialHelper();
       document.querySelector('#update-panel').hidden = mode !== 'update';
       document.querySelector('#campaign-field').classList.toggle('hidden', mode === 'review');
+      document.querySelector('#campaign-select-label').textContent = mode === 'create'
+        ? 'Continue an existing campaign'
+        : 'Campaign folder';
+      document.querySelector('#campaign-selection-help').textContent = mode === 'create'
+        ? 'Select a campaign to continue from its saved Markdown; approved updates return to that folder.'
+        : 'Choose the campaign folder for approved Markdown updates.';
       [...conversation.querySelectorAll('.message, .proposal, .typing')].forEach(node => node.remove());
       status.textContent = '';
     }
@@ -311,7 +330,7 @@
       try {
         const response = await fetch('/api/apply', {
           method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({mode, campaign: name, files: pendingProposal.files})
+          body: JSON.stringify({mode, campaign: name, campaign_root: campaignRootInput.value.trim(), files: pendingProposal.files})
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Could not apply files.');
@@ -325,16 +344,24 @@
 
     async function readReviewDocument() {
       const file = reviewFile.files?.[0];
-      if (!file) return '';
+      if (!file) return {text: '', pdfBase64: ''};
       if (file.size > maxContextBytes) {
         throw new Error(`Review documents must be ${Math.floor(maxContextBytes / 1024)} KB or smaller.`);
       }
-      const textExtensions = ['.md', '.markdown', '.txt', '.text', '.rst', '.csv', '.json', '.yaml', '.yml', '.html', '.htm'];
       const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
-      if (!textExtensions.includes(extension) && !file.type.startsWith('text/')) {
-        throw new Error('This file can be selected, but only text-based documents can be reviewed. Use Markdown, TXT, RST, CSV, JSON, YAML, or HTML.');
+      if (extension === '.pdf' || file.type === 'application/pdf') {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        let binary = '';
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+          binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        }
+        return {text: '', pdfBase64: btoa(binary)};
       }
-      return await file.text();
+      const textExtensions = ['.md', '.markdown', '.txt', '.text', '.rst', '.csv', '.json', '.yaml', '.yml', '.html', '.htm'];
+      if (!textExtensions.includes(extension) && !file.type.startsWith('text/')) {
+        throw new Error('Choose a text document or a PDF with selectable text. Scanned PDFs need OCR.');
+      }
+      return {text: await file.text(), pdfBase64: ''};
     }
 
     document.querySelectorAll('.mode-button').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
@@ -343,7 +370,9 @@
       const text = messageInput.value.trim();
       if (!text || sendButton.disabled) return;
       try {
-        const reviewDocument = mode === 'review' ? await readReviewDocument() : '';
+        const contextDocument = ['review', 'create'].includes(mode)
+          ? await readReviewDocument()
+          : {text: '', pdfBase64: ''};
         const campaign = mode === 'review' ? '' : (campaignSelect.value || campaignName.value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, ''));
         if (mode !== 'review' && campaign) campaignName.value = campaign;
         const requestMessages = [...messages, {role: 'user', content: text}];
@@ -353,7 +382,17 @@
         status.textContent = 'Thinking…';
         const response = await fetch('/api/chat', {
           method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({mode, campaign, messages: requestMessages, review_document: reviewDocument, session_record: mode === 'update' ? sessionRecord.value : ''})
+          body: JSON.stringify({
+            mode,
+            campaign,
+            campaign_root: campaignRootInput.value.trim(),
+            messages: requestMessages,
+            review_document: mode === 'review' ? contextDocument.text : '',
+            review_document_pdf_base64: mode === 'review' ? contextDocument.pdfBase64 || undefined : undefined,
+            starting_document: mode === 'create' ? contextDocument.text : '',
+            starting_document_pdf_base64: mode === 'create' ? contextDocument.pdfBase64 || undefined : undefined,
+            session_record: mode === 'update' ? sessionRecord.value : ''
+          })
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'The request failed.');
@@ -368,12 +407,13 @@
       if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); document.querySelector('#chat-form').requestSubmit(); }
     });
     reviewFile.addEventListener('change', () => {
-      document.querySelector('#review-file-name').textContent = reviewFile.files?.[0]?.name || 'Choose a document to review. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.';
+      document.querySelector('#review-file-name').textContent = reviewFile.files?.[0]?.name || 'Choose a document to review. Text files and PDFs with selectable text are supported; scanned PDFs need OCR.';
     });
 
     async function loadCampaigns(selectName = '') {
       try {
-        const response = await fetch('/api/campaigns');
+        const query = new URLSearchParams({root: campaignRootInput.value.trim()});
+        const response = await fetch(`/api/campaigns?${query}`);
         const data = await response.json();
         campaignSelect.replaceChildren(new Option('New campaign', ''));
         data.campaigns.forEach(name => campaignSelect.add(new Option(name, name)));
@@ -386,17 +426,28 @@
       try {
         const response = await fetch('/api/config');
         const config = await response.json();
+        if (!localStorage.getItem('campaign-root')) {
+          campaignRootInput.value = config.campaign_root || '';
+        } else {
+          campaignRootInput.value = localStorage.getItem('campaign-root');
+        }
         if (response.ok && Number.isInteger(config.max_context_bytes) && config.max_context_bytes > 0) {
           maxContextBytes = config.max_context_bytes;
-          document.querySelector('#review-file-name').textContent = `Choose a document to review, up to ${Math.floor(maxContextBytes / 1024)} KB. Text files such as Markdown, TXT, RST, CSV, JSON, YAML, or HTML are supported.`;
+          updateMaterialHelper();
         }
+        await loadCampaigns();
       } catch { /* Keep the default label if config cannot be fetched. */ }
     }
+    campaignRootInput.addEventListener('change', () => {
+      localStorage.setItem('campaign-root', campaignRootInput.value.trim());
+      campaignSelect.value = '';
+      campaignName.value = '';
+      loadCampaigns();
+    });
     campaignSelect.addEventListener('change', () => {
       if (campaignSelect.value) campaignName.value = '';
       else campaignName.focus();
     });
-    loadCampaigns();
     loadConfig();
   </script>
 </body>

@@ -35,8 +35,12 @@ set through the environment or `.env` file. `AI_CAMPAIGN_MAX_CONTEXT_KB`
 sets the maximum size of uploaded review documents, supplied session records,
 and campaign context sent with a chat request; it defaults to 500 KB.
 
-Reviewer Mode accepts a Markdown file from the browser and does not write
-campaign files. Update Mode currently accepts a Scribe recap pasted by the
-user; a direct Scribe integration is not implemented. In Creation and Update
-modes, generated Markdown is only written after the user reviews the proposal
-and selects **Apply files**.
+Reviewer Mode accepts text documents and PDFs with selectable text. Scanned
+PDFs without an OCR text layer are not supported. In Create Mode, attach
+optional text or selectable-text PDF starting material, or choose an existing
+campaign to continue from its saved Markdown. The Campaign directory field
+sets the absolute folder where campaign subfolders are listed and created;
+the browser remembers the selected path. Update Mode currently accepts a
+Scribe recap pasted by the user; a direct Scribe integration is not
+implemented. In Creation and Update modes, generated Markdown is only written
+after the user reviews the proposal and selects **Apply files**.
