@@ -20,6 +20,14 @@ it answers the questions tables actually ask — "who was that innkeeper?",
 
 No part of the Scribe assumes an AI PC, DM, or NPC agent exists.
 
+### Part of the campaign when there is one
+
+When a campaign was built with the Campaign Agent, the Scribe keeps its
+data inside that campaign's running copy rather than in a separate
+location, and saves a short summary of each session there (see Campaign
+folder). Without a campaign folder, the Scribe works exactly as it does on
+its own.
+
 ### Bootstraps the other agents
 
 The same record is what makes the other agents possible. A PC agent
@@ -31,6 +39,11 @@ to brief it (see the PC agent's Character Creation, option 3).
 The dependency runs one way: PC agents need the Scribe, the Scribe needs
 nothing. For that reason the Scribe is built and shipped **first** — it
 can be proven at a real table, on its own, before anything depends on it.
+
+The first release pairs the Scribe with the Campaign Agent. The PC, DM, and
+NPC agents are on hold, and their requirements will be redone later; the
+references to them in this document describe the intended direction, not
+first-release work.
 
 ## Interfaces
 
@@ -45,6 +58,12 @@ transcribes the table's audio via speech-to-text.
   Scribe records who said what — DM, human players, and AI PC bots alike.
 - Session boundaries match the PC agent's definition: a session starts
   when the Scribe joins the voice channel and ends when it leaves.
+- **Started by the Campaign Agent.** When used with the Campaign Agent, the
+  DM's `/start-session` starts the Scribe with the running copy's folder
+  and the Discord voice channel to join, and `/end-session` tells it to
+  finalize the session and leave. The Scribe reports back whether it
+  joined, so the DM knows recording has begun. Used on its own, the Scribe
+  is started and joins the channel as before.
 
 ### 2. Discord text/slash commands (query + control)
 
@@ -72,11 +91,59 @@ The Scribe owns a campaign-level database and is its **only writer**.
   campaign. Each agent's own character/private state stays in its own
   instance database.
 
-### 4. Out of scope for v1
+### 4. Campaign folder (when used with the Campaign Agent)
+
+When the Scribe is configured with a campaign running copy (see the
+Campaign Agent's Campaign Lifecycle), it uses that folder:
+
+- **Data inside the campaign.** The Scribe's campaign database and working
+  data live in the running copy's `.scribe/` folder. The Scribe still owns
+  the database and is still its only writer.
+- **Session summaries.** When a session's recap is finalized, the Scribe
+  writes a short Markdown summary to `sessions/<YYYY-MM-DD>.md`, named by
+  the session date. A second session on the same date gets a suffix, such
+  as `2026-10-20-2.md`.
+- **Brief by design.** The file is a short summary of what happened, what
+  changed, and what was decided. Fuller detail stays in the database and is
+  obtained by asking the Scribe.
+- **The Scribe owns these files.** When the DM corrects a session's record,
+  the Scribe rewrites that session's summary. Hand edits to a summary may
+  be overwritten.
+- Secrets never go in the campaign folder in a way that could be
+  committed; `.env` and the transcript buffer are excluded by the
+  campaign's `.gitignore`.
+
+Without a configured campaign folder, the Scribe keeps everything in its
+own instance directory and writes no session files.
+
+### 5. Private DM queries (outside Discord)
+
+Players ask the Scribe questions in Discord, where everyone at the table
+can see the answers. The DM can also ask the Scribe questions privately,
+outside Discord, through read-only query tools (an MCP server) used from
+VS Code.
+
+- The same lookups as the Discord commands are available: recaps, NPCs,
+  locations, open threads, and awareness. The DM can also ask free-form
+  questions about the record.
+- The DM can ask at any time, including during a session while the Scribe
+  is recording. Mid-session answers use the record so far, which is kept
+  current by rolling updates.
+- Answers go only to the DM and are never posted to Discord.
+- Private queries can include records the DM marked private (see Access
+  control).
+- The Campaign Agent uses the same tools when working with the DM in
+  Create, Game Session, and Update modes. The tools also work without the
+  Campaign Agent, so a DM using the Scribe on its own can ask privately too.
+- The query tools read the campaign database and never write to it.
+  DM-only commands (`/note`, `/correct`) stay in Discord for v1.
+
+### 6. Out of scope for v1
 
 Noted for later, not built now: cross-campaign memory, exporting the
-campaign record to external tools (wikis, VTTs), summarizing from
-recordings after the fact rather than live, and any non-Discord input.
+campaign record to external tools (wikis, VTTs) beyond the session
+summaries above, summarizing from recordings after the fact rather than
+live, and any non-Discord input.
 
 ## What the Scribe Maintains
 
@@ -193,6 +260,10 @@ roleplay the recounting.
 - Records the DM explicitly marks private (DM notes, prep material, asides
   recorded via `/note`) are visible only to the DM and are never exposed
   to other agents through the campaign database.
+- Private DM queries outside Discord may include DM-private records, since
+  only the DM sees the answers. This includes the Campaign Agent when it
+  is working with the DM, because its answers also go only to the DM. PC
+  and NPC agents never receive DM-private records.
 
 ## Configuration & Secrets
 
@@ -205,13 +276,19 @@ token/application, separate from every PC agent's.
 
 ## Startup & File Discovery
 
-**Hosting** — Like the PC agent, the Scribe runs on separate, always-on
-infrastructure and is never assumed to be running on a human player's
-device. Players interact with it only through the Discord client.
+**Hosting** — The Scribe runs locally on the DM's computer, alongside the
+other agents. It never runs on a player's device; players interact with it
+only through the Discord client.
 
 **Instance directory** — The Scribe runs from its own working directory,
 outside the repository checkout, holding its `.env`, the campaign
-database it owns, and any other data it needs.
+database it owns, and any other data it needs. When configured with a
+campaign running copy, the database and working data move to that
+folder's `.scribe/` directory instead (see Campaign folder).
+
+**Reaching the campaign folder** — Because the Scribe runs on the same
+computer as the running copy, it reads and writes the campaign folder
+directly.
 
 **One per campaign** — Exactly one Scribe deployment serves a campaign,
 in contrast to PC agents, which are one per character.
