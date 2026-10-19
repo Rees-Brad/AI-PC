@@ -528,6 +528,168 @@ the later levels.
 - Unlinked maps, such as those left behind when a section is dropped, are
   easy to find so the DM can decide whether to delete them.
 
+## Release 2 (future): Publishing and Importing Campaigns
+
+Not part of the first release. Release 2 lets campaign authors use the
+Campaign Agent to produce a campaign they can market and sell, and lets a
+DM who buys one load it back into the agent to run it.
+
+```text
+ Author:  Create ──► master campaign ──► Publish ──► campaign PDF ──► sold
+ DM:      campaign PDF ──► Import ──► master campaign ──► Start ──► Game Session / Update
+```
+
+The author is a new kind of user: someone who writes a campaign for other
+DMs rather than to run it themselves. Authors use the same Campaign
+Creation Mode as a DM.
+
+### Publish: campaign to a single PDF
+
+`/publish-campaign` turns a finished master campaign into one PDF document
+suitable for sale.
+
+- **Only masters are published.** A running copy contains play history
+  (`sessions/`, `.scribe/`, and index statuses from play), so the agent
+  refuses to publish one and offers to publish its master instead.
+- **Readiness check first.** Before building the PDF, the agent runs the
+  same checks as `/check-campaign` and also reports placeholder sections,
+  empty sections, and missing maps. The author decides whether to fix them
+  or publish anyway.
+- **Book order.** The PDF follows the campaign's structure: title page,
+  table of contents, campaign overview, then each chapter with its
+  adventures and encounters in number order, then the NPC, item, and
+  location indexes as appendices.
+- **Maps.** Each map appears with the section that links it. A map used by
+  several sections is printed once and referenced from the others. Maps are
+  included at full resolution, and the author can choose to add a map
+  appendix with full-page versions.
+- **Navigation.** The table of contents, PDF bookmarks, and cross-references
+  between sections (such as an adventure linking to an encounter or an index
+  entry) are clickable links inside the PDF.
+- **Front matter.** The author supplies the title, author name, cover image,
+  credits, and a license or copyright page (see Copyright and watermarks).
+- **Layout options.** At least page size (Letter or A4). Further styling,
+  such as fonts and themes, is decided when Release 2 is designed.
+- **Embedded source is optional.** By default the PDF embeds the campaign's
+  source files so a buyer can import it (see Import). The author can
+  publish without the embedded source, for buyers who will only read or
+  print the campaign; such a PDF cannot be imported.
+- **Edition.** Each publish records an edition or version, shown on the
+  title or copyright page and stored with the embedded source.
+- **Review before release.** The PDF is written to a separate output
+  folder and the author reviews it before it is treated as final. Publishing
+  never changes the campaign files.
+- **The campaign folder is the source.** The author maintains the campaign
+  in its master folder, not in the PDF. To release a revised edition, the
+  author edits the master and publishes again. Keeping the master in git is
+  recommended so each edition can be tagged and compared.
+
+### Publish outputs: digital and print-ready
+
+The first user lined up for Release 2 plans to sell campaigns online, with
+buyers able to print them. Publish therefore produces two kinds of PDF from
+the same campaign:
+
+| Output | For | Requirements |
+|---|---|---|
+| Digital | Selling online, reading on screen, and printing at home | Clickable navigation, reasonable file size, and a layout that prints cleanly on a home printer: page numbers, safe margins, and maps that stay legible when printed. |
+| Print-ready | Print-on-demand services | Bleed and trim size for the chosen book size, high-resolution images, embedded fonts, and the PDF standard the target services require (commonly PDF/X). No clickable elements are relied on. |
+
+- The author can produce either output or both in one publish.
+- Before building the print-ready PDF, the agent reports images whose
+  resolution is too low for print at their placed size, and any content
+  that falls outside the safe area.
+- The exact print settings (trim sizes, bleed, color handling, PDF/X
+  variant) are chosen by checking the requirements of the print-on-demand
+  services authors are likely to use, when Release 2 is designed.
+- The digital PDF can carry the embedded source for import; the
+  print-ready PDF does not need to.
+
+### Copyright and watermarks
+
+The author can mark a published campaign as theirs.
+
+**Copyright information**
+
+- The author enters copyright details once for the campaign: copyright
+  holder, year, rights statement (for example "All rights reserved"), and
+  any license or attribution text. They are saved with the master so every
+  edition reuses them.
+- The copyright details appear on the copyright page and, if the author
+  chooses, as a short line in the footer of every page.
+- The details are also written into the PDF's document properties (title,
+  author, copyright, and rights metadata), so they travel with the file
+  even when its pages are not shown.
+- When the source is embedded, every embedded file carries the copyright
+  notice, and Import keeps those notices in the recreated campaign.
+
+**Watermarks**
+
+- The author can add a text or image watermark, such as "Preview",
+  "Playtest Draft", or a logo.
+- The author controls the watermark's placement (for example centered or
+  diagonal), size, and transparency, and whether it appears on all pages,
+  maps only, or pages other than the cover.
+- Watermarks are set separately for the digital and print-ready outputs,
+  so a preview PDF can be watermarked while the print-ready file stays
+  clean.
+- Watermarks must not make text or map labels unreadable. The agent warns
+  when a watermark setting is likely to obscure content.
+- Watermarks and copyright notices discourage copying but do not prevent
+  it. The agent says so, and reminds the author that embedded source files
+  can be extracted without the watermark.
+- **Rights are the author's responsibility.** The agent does not judge
+  whether the author may sell the material. It reminds the author that
+  game-system content, such as material from a system reference document,
+  may require attribution or a specific license, and that maps and artwork
+  must be theirs to sell.
+
+### Import: campaign PDF to a campaign structure
+
+`/import-campaign` takes a campaign PDF made by Publish and recreates the
+campaign folder so a DM can run it with the agent.
+
+- **Exact, not guessed.** Publish embeds the campaign's source files (the
+  Markdown sections, indexes, and maps) inside the PDF along with a format
+  version. Import rebuilds the campaign from that embedded data, so the
+  result matches what the author wrote rather than text recovered from page
+  layout.
+- **Creates a master.** Import produces a master campaign with the full
+  file structure, indexes, and maps, then offers to start a running copy so
+  the DM can go straight to Game Session Mode.
+- **Checked before use.** After importing, the agent runs `/check-campaign`
+  and reports any problems.
+- **Clear failures.** If the PDF was not made by Publish, was published
+  without embedded source, has had its embedded data removed, or uses a
+  newer format version than the agent supports, the agent says so clearly
+  and imports nothing.
+- **Agent-made PDFs only.** Importing campaign PDFs made by other tools is
+  planned for Release 3 or later (see Later releases).
+- **Different from starting material.** Create Mode's PDF starting
+  material is reference text for a new campaign. Import recreates an
+  existing, finished campaign.
+- **Buyers get editable files.** Because the source files are embedded,
+  a DM who imports a campaign can edit it freely in their running copy.
+  Authors should know this before publishing.
+
+### Release 2 open questions
+
+- A DM who imported one edition and is partway through running it buys a
+  revised edition. How do they adopt it? For example, import it as a new
+  master beside the old one and choose which changes to bring into their
+  running copy.
+
+## Later Releases (Release 3 or later)
+
+- **Import campaign PDFs made by other tools.** Campaign PDFs are produced
+  in many different ways, so recovering the full structure, text, maps, and
+  stat blocks reliably from page layout is uncertain. This is deferred
+  until the agent-made import is proven, and it would be best-effort, with
+  the DM reviewing the recovered structure before use.
+- **Per-buyer watermarks (deferred question).** Whether Publish should add
+  watermarks naming the buyer, such as "Prepared for <buyer name>", is
+  set aside for now. Online stores often add these at the time of sale.
+
 ## Goals
 
 Add campaign goals here, such as desired tone, themes, pacing, or the kind
