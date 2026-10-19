@@ -29,10 +29,10 @@ jobs:
         run: ruff check .
 
       - name: Type-check (mypy)
-        run: mypy shared/src/ai_pc_shared agents/pc/src/ai_pc --ignore-missing-imports
+        run: mypy shared/src/ai_pc_shared agents/pc/src/ai_pc agents/campaign/src/ai_campaign --ignore-missing-imports
 
       - name: Test (pytest)
         run: pytest
 
       - name: Build/import check
-        run: python -c "import ai_pc_shared; import ai_pc"
+        run: python -c "import ai_pc_shared; import ai_pc; import ai_campaign.mcp_server"

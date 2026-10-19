@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "campaign-agent",
+  "version": "0.2.0",
+  "description": "Create D&D campaigns as Markdown in VS Code and make running copies for each group.",
+  "author": {
+    "name": "Brad Rees"
+  },
+  "userConfig": {
+    "python": {
+      "type": "string",
+      "title": "Python interpreter",
+      "description": "Python that has the ai-pc-agent-campaign package installed, for example python3 or the full path to a virtual environment's python.",
+      "default": "python3"
+    }
+  }
+}

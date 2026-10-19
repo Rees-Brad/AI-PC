@@ -59,7 +59,9 @@ version is retired.
   DM does not need a command for every turn.
 - Every file the agent creates or changes is shown to the DM as a change
   to review and accept before it is written. The agent never says a
-  change was saved until the DM has accepted it.
+  change was saved until the DM has accepted it. Operations done by the
+  campaign tools, such as creating a campaign or a running copy, are
+  approved by the DM as a tool call before they run.
 - Each DM uses their own Claude account. No API keys or credentials are
   stored in the repository or in campaign folders.
 - Everything runs on the DM's computer: VS Code, the Campaign Agent, the
@@ -91,7 +93,9 @@ the plugin, so improving the agent does not require editing every campaign.
 | `/update-campaign` | Works through the latest session with the DM and the Scribe and proposes changes to the remaining campaign. |
 | `/check-campaign` | Reports broken links, unlinked maps, index entries that point nowhere, and structure problems without changing anything. |
 
-Command names are working names and can change during design.
+Command names are working names and can change during design. Because the
+commands come from a plugin, Claude Code may show them with the plugin's
+name as a prefix, such as `/campaign-agent:create-campaign`.
 
 ## Campaign Lifecycle
 
@@ -125,8 +129,8 @@ campaign, so:
 - The agent explains the master/running-copy split when a campaign is
   first created and again when it is started.
 - Each campaign folder records whether it is a master or a running copy,
-  and a running copy records which master it came from. The marker's
-  format is decided with the other metadata conventions.
+  and a running copy records which master it came from (see Campaign
+  marker).
 - The agent refuses to run Game Session or Update Mode on a master campaign
   and offers to make a running copy instead.
 - Create Mode works on a master. Structural fixes made to a running copy
@@ -425,8 +429,13 @@ that belong to it.
   sessions/                 # running copy only, written by the Scribe
     2026-10-20.md
   .scribe/                  # running copy only, the Scribe's data
+  .campaign/
+    campaign.json           # the campaign marker, written by the agent's tools
   .gitignore
 ```
+
+Empty `maps/`, `chapters/`, and `sessions/` folders hold a `.gitkeep` file
+so git keeps them.
 
 - `campaign.md` contains the campaign overview, central story arc, goals,
   and links to the chapters and the three indexes.
@@ -444,10 +453,32 @@ that belong to it.
 - All map files for the campaign are stored in the `maps/` folder. Campaign,
   chapter, and adventure files link to them with relative Markdown links.
 - `sessions/` and `.scribe/` exist only in a running copy. The Campaign
-  Agent reads `sessions/` and never writes to either.
+  Agent creates the empty `sessions/` folder when it starts a running copy,
+  reads the summaries the Scribe writes there, and otherwise never writes
+  to either folder.
 
-Metadata conventions, including the master/running-copy marker, remain to
-be decided.
+### Campaign marker
+
+`.campaign/campaign.json` records what kind of campaign folder this is. Only
+the agent's tools write it; the DM and the agent's conversation do not edit
+it by hand.
+
+| Key | Meaning |
+|---|---|
+| `role` | `master` or `running`. |
+| `title` | The campaign's title. |
+| `created` | Date the master was created. |
+| `format_version` | Version of the marker format, currently 1. |
+| `edition` | The master's edition, for Release 2 publishing. |
+| `source_master` | Running copy only: the master folder it was made from. |
+| `source_commit` | Running copy only: the master's git commit it was cloned from. |
+| `group` | Running copy only: the group it is for. |
+| `started` | Running copy only: date it was started. |
+
+Keys the agent does not recognize are kept when the marker is rewritten, so
+later versions and the Scribe can add their own, such as the group's
+Discord channel and whether a game session is open. Other metadata
+conventions, such as front matter in section files, remain to be decided.
 
 ## Maps
 

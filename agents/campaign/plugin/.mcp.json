@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "campaign": {
+      "command": "${user_config.python}",
+      "args": ["-m", "ai_campaign.mcp_server"]
+    }
+  }
+}

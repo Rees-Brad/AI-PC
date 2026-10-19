@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ai-pc",
+  "description": "AI agents for running tabletop RPG campaigns.",
+  "owner": {
+    "name": "Brad Rees"
+  },
+  "plugins": [
+    {
+      "name": "campaign-agent",
+      "source": "./agents/campaign/plugin",
+      "description": "Create D&D campaigns as Markdown in VS Code and make running copies for each group."
+    }
+  ]
+}
