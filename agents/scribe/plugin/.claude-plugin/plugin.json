@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "scribe",
+  "version": "0.2.0",
+  "description": "Ask the Scribe privately about what happened at the table: recaps, plot threads, NPCs, who knows what, and DM notes.",
+  "author": {
+    "name": "Brad Rees"
+  },
+  "userConfig": {
+    "python": {
+      "type": "string",
+      "title": "Python interpreter",
+      "description": "Python that has the ai-pc-agent-scribe package installed, for example python3 or the full path to a virtual environment's python.",
+      "default": "python3"
+    }
+  }
+}

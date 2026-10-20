@@ -22,17 +22,17 @@ jobs:
       - name: Install packages (shared first, then agents)
         run: |
           pip install --upgrade pip
-          pip install -e ./shared -e './agents/pc[dev]' -e ./agents/campaign
+          pip install -e ./shared -e './agents/pc[dev]' -e ./agents/campaign -e './agents/scribe[dev]'
           pip install ruff mypy
 
       - name: Lint (ruff)
         run: ruff check .
 
       - name: Type-check (mypy)
-        run: mypy shared/src/ai_pc_shared agents/pc/src/ai_pc agents/campaign/src/ai_campaign --ignore-missing-imports
+        run: mypy shared/src/ai_pc_shared agents/pc/src/ai_pc agents/campaign/src/ai_campaign agents/scribe/src/ai_scribe --ignore-missing-imports
 
       - name: Test (pytest)
         run: pytest
 
       - name: Build/import check
-        run: python -c "import ai_pc_shared; import ai_pc; import ai_campaign.mcp_server"
+        run: python -c "import ai_pc_shared; import ai_pc; import ai_campaign.mcp_server; import ai_scribe.mcp_server"
