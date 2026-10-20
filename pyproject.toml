@@ -19,3 +19,5 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["shared/tests", "agents/pc/tests", "agents/campaign/tests", "agents/scribe/tests"]
 asyncio_mode = "auto"
+# Agents have test files with the same names (such as test_mcp_server.py).
+addopts = "--import-mode=importlib"

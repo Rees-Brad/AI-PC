@@ -10,6 +10,11 @@
       "name": "campaign-agent",
       "source": "./agents/campaign/plugin",
       "description": "Create D&D campaigns as Markdown in VS Code and make running copies for each group."
+    },
+    {
+      "name": "scribe",
+      "source": "./agents/scribe/plugin",
+      "description": "Ask the Scribe privately about what happened at the table: recaps, plot threads, NPCs, who knows what, and DM notes."
     }
   ]
 }

@@ -56,6 +56,11 @@ def list_entities(session: Session, kind: EntityKind | None = None) -> list[Enti
     return list(session.scalars(stmt.order_by(Entity.name.asc())).all())
 
 
+def list_threads(session: Session) -> list[PlotThread]:
+    """Every plot thread, open or closed, most recently updated first."""
+    return list(session.scalars(select(PlotThread).order_by(PlotThread.updated_at.desc())).all())
+
+
 def open_threads(session: Session) -> list[PlotThread]:
     stmt = (
         select(PlotThread)

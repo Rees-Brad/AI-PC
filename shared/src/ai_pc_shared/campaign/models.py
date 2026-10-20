@@ -45,6 +45,9 @@ class SessionRecord(CampaignBase):
     # Rebuilt incrementally during play; finalized when the session ends.
     recap: Mapped[str] = mapped_column(Text, default="")
     finalized: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Path of the session summary written into the campaign folder, relative to it.
+    # Kept so a corrected record rewrites the same file.
+    summary_file: Mapped[str | None] = mapped_column(String, nullable=True)
 
     transcript_lines: Mapped[list["TranscriptLine"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"

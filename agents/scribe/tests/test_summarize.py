@@ -116,3 +116,47 @@ def test_lookup_reports_nothing_for_an_unknown_entity(session):
 def test_threads_output_lists_open_threads(session):
     apply_digest(session, "s1", _digest())
     assert queries.threads(session) == "- Missing caravan: Tracks lead north."
+
+
+class _StubMessages:
+    def __init__(self, response):
+        self.response = response
+        self.kwargs = {}
+
+    def parse(self, **kwargs):
+        self.kwargs = kwargs
+        return self.response
+
+
+def _stub_client(response):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(messages=_StubMessages(response))
+
+
+def test_summarize_reports_refusals_clearly():
+    from types import SimpleNamespace
+
+    from ai_scribe.config import Settings
+    from ai_scribe.llm.summarize import summarize_session
+
+    response = SimpleNamespace(
+        stop_reason="refusal",
+        stop_details=SimpleNamespace(category="general_harms"),
+        parsed_output=None,
+    )
+    with pytest.raises(RuntimeError, match="declined.*general_harms"):
+        summarize_session(_stub_client(response), Settings(), "", [])
+
+
+def test_summarize_uses_configured_model_and_room_for_thinking():
+    from types import SimpleNamespace
+
+    from ai_scribe.config import Settings
+    from ai_scribe.llm.summarize import summarize_session
+
+    digest = _digest()
+    client = _stub_client(SimpleNamespace(stop_reason="end_turn", parsed_output=digest))
+    assert summarize_session(client, Settings(), "", []) is digest
+    assert client.messages.kwargs["model"] == "claude-haiku-5-5"
+    assert client.messages.kwargs["max_tokens"] == 16000

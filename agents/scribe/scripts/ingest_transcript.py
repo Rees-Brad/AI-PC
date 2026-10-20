@@ -4,6 +4,11 @@ Lets the summarization path be exercised without Discord or speech-to-text.
 
 Usage:
     python scripts/ingest_transcript.py <session-id> <transcript-file> [--finalize]
+        [--campaign-folder <running copy>]
+
+With a campaign folder (or SCRIBE_CAMPAIGN_FOLDER), the record lives in that running
+copy's .scribe/ folder, and --finalize also writes the session's summary to its
+sessions/ folder.
 
 The transcript file is one line per utterance, "Speaker: what they said".
 Blank lines and lines starting with # are ignored.
@@ -18,8 +23,8 @@ from ai_pc_shared.campaign.db import (
     make_campaign_session_factory,
 )
 from ai_pc_shared.llm.client import make_client
-from ai_scribe.campaign import writer
-from ai_scribe.config import load_settings
+from ai_scribe.campaign import folder, writer
+from ai_scribe.config import database_path, load_settings
 from ai_scribe.llm.summarize import ingest
 
 
@@ -45,6 +50,11 @@ def main() -> None:
         action="store_true",
         help="End the session and discard its transcript buffer afterwards",
     )
+    parser.add_argument(
+        "--campaign-folder",
+        type=Path,
+        help="A Campaign Agent running copy to keep the record in",
+    )
     args = parser.parse_args()
 
     utterances = parse_transcript(args.transcript.read_text())
@@ -52,8 +62,8 @@ def main() -> None:
         print(f"No usable lines in {args.transcript}")
         return
 
-    settings = load_settings()
-    engine = make_campaign_engine(settings.campaign_db_path)
+    settings = load_settings(args.campaign_folder)
+    engine = make_campaign_engine(database_path(settings))
     init_campaign_db(engine)
     session_factory = make_campaign_session_factory(engine)
 
@@ -65,8 +75,11 @@ def main() -> None:
         client = make_client(settings.anthropic_api_key)
         digest = ingest(client, settings, session, args.session_id)
 
+        summary_path = None
         if args.finalize:
-            writer.finalize_session(session, args.session_id)
+            summary_path = folder.finalize_session(
+                session, args.session_id, settings.scribe_campaign_folder
+            )
 
     print(f"\n=== Recap ===\n{digest.recap}")
 
@@ -89,6 +102,8 @@ def main() -> None:
 
     if args.finalize:
         print(f"\nSession {args.session_id!r} finalized; transcript buffer discarded.")
+        if summary_path is not None:
+            print(f"Session summary written to {summary_path}")
 
 
 if __name__ == "__main__":

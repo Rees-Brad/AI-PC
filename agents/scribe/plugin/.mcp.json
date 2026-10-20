@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "scribe": {
+      "command": "${user_config.python}",
+      "args": ["-m", "ai_scribe.mcp_server"]
+    }
+  }
+}

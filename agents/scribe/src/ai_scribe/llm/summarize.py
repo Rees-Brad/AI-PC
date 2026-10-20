@@ -35,7 +35,12 @@ class AwarenessEntry(BaseModel):
 
 
 class SessionDigest(BaseModel):
-    recap: str = Field(description="Narrative summary of the session so far")
+    recap: str = Field(
+        description=(
+            "Brief narrative summary of the session so far: what the party did, what "
+            "changed, and what was decided, in a few short paragraphs"
+        )
+    )
     threads: list[ThreadUpdate] = Field(default_factory=list)
     entities: list[EntityUpdate] = Field(default_factory=list)
     awareness: list[AwarenessEntry] = Field(default_factory=list)
@@ -51,7 +56,9 @@ SYSTEM_PROMPT = (
     "- You are an observer, not a participant. Do not editorialize, offer "
     "advice, or narrate events that did not occur.\n"
     "- Reuse existing thread titles and entity names when updating them, so the "
-    "record stays consolidated rather than duplicated.\n\n"
+    "record stays consolidated rather than duplicated.\n"
+    "- Keep the recap brief. It is saved as the session's summary for the DM; "
+    "fuller detail stays in the threads, entities, and awareness records.\n\n"
     "Awareness rules:\n"
     "- A character is aware FIRSTHAND of events they were present for.\n"
     "- When a split party regroups, assume they caught each other up: absent "
@@ -126,11 +133,15 @@ def summarize_session(
 ) -> SessionDigest:
     response = client.messages.parse(
         model=settings.scribe_model,
-        max_tokens=4000,
+        # Room for the model's thinking as well as the digest itself.
+        max_tokens=16000,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": build_prompt(prior_recap, format_transcript(lines))}],
         output_format=SessionDigest,
     )
+    if response.stop_reason == "refusal":
+        category = response.stop_details.category if response.stop_details else None
+        raise RuntimeError(f"Claude declined to summarize this material (category={category!r})")
     if response.parsed_output is None:
         raise RuntimeError(
             f"Claude did not return a structured digest (stop_reason={response.stop_reason!r})"

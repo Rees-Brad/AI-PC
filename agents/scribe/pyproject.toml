@@ -1,11 +1,12 @@
 [project]
 name = "ai-pc-agent-scribe"
-version = "0.1.0"
+version = "0.2.0"
 description = "AI-backed campaign scribe: transcribes the table and keeps the campaign record"
 requires-python = ">=3.10"
 dependencies = [
     "ai-pc-shared",
     "anthropic>=0.40",
+    "mcp>=2.3,<3",
     "pydantic>=2.6",
     "pydantic-settings>=2.2",
 ]
@@ -26,6 +27,7 @@ dev = [
 
 [project.scripts]
 ai-scribe = "ai_scribe.main:run"
+ai-scribe-mcp = "ai_scribe.mcp_server:main"
 
 [build-system]
 requires = ["setuptools>=68"]
