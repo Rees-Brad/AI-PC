@@ -13,6 +13,8 @@ The first release is two agents that run on the DM's computer:
   DM create a campaign in VS Code with Claude Code, run game sessions from
   a copy of it, and update the rest of the campaign after each session.
   See [`agents/campaign/REQUIREMENTS.md`](agents/campaign/REQUIREMENTS.md).
+  It is a Claude Code plugin; see
+  [`agents/campaign/README.md`](agents/campaign/README.md) to install it.
 - **[`agents/scribe/`](agents/scribe/)** - the Scribe. Listens to the
   table in Discord, keeps the campaign's record of what happened, answers
   players' questions in Discord and the DM's privately, and saves a short

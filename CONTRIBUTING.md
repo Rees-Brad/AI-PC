@@ -24,7 +24,7 @@ a second agent actually needs it.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate   # or your preferred env tool
-pip install -e ./shared -e './agents/pc[dev]'
+pip install -e ./shared -e './agents/pc[dev]' -e './agents/campaign[dev]'
 ```
 
 Install order matters: `shared` must be installed before `agents/pc`,
@@ -40,9 +40,9 @@ These are exactly what CI runs (`.github/workflows/ci.yml`):
 
 ```bash
 ruff check .
-mypy shared/src/ai_pc_shared agents/pc/src/ai_pc --ignore-missing-imports
+mypy shared/src/ai_pc_shared agents/pc/src/ai_pc agents/campaign/src/ai_campaign --ignore-missing-imports
 pytest
-python -c "import ai_pc_shared; import ai_pc"
+python -c "import ai_pc_shared; import ai_pc; import ai_campaign.mcp_server"
 ```
 
 ## Pull requests
