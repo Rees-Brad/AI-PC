@@ -64,12 +64,36 @@ def check_campaign(folder: str) -> dict[str, Any]:
 
 
 @server.tool()
-def create_campaign(folder: str, title: str, init_git: bool = False) -> dict[str, Any]:
-    """Set up a new master campaign in an empty or new folder: campaign.md, the NPC, item,
-    and location indexes, maps/ and chapters/ folders, the campaign marker, and a
-    .gitignore. With init_git, the folder is made a git repository and committed."""
+def create_campaign(
+    folder: str, title: str, init_git: bool = False, rules: str = lifecycle.DEFAULT_RULES
+) -> dict[str, Any]:
+    """Set up a new master campaign in an empty or new folder: campaign.md (with the rules
+    edition and its SRD attribution), the NPC, item, and location indexes, maps/ and
+    chapters/ folders, GETTING_STARTED.md, OPEN_ITEMS.md, WORKLOG.md, the campaign marker,
+    and a .gitignore. The rules edition defaults to D&D 5e (2024); pass another only when
+    the DM names one. With init_git, the folder is made a git repository and committed."""
     with _reported():
-        return lifecycle.create_campaign(_path(folder), title, init_git=init_git)
+        return lifecycle.create_campaign(
+            _path(folder), title, init_git=init_git, rules=rules
+        )
+
+
+@server.tool()
+def ensure_campaign_docs(folder: str) -> dict[str, Any]:
+    """Add GETTING_STARTED.md, OPEN_ITEMS.md, and WORKLOG.md to a campaign that lacks them,
+    such as one created by an earlier version. Existing files are never changed."""
+    with _reported():
+        return lifecycle.ensure_campaign_docs(_path(folder))
+
+
+@server.tool()
+def snapshot_campaign(folder: str, summary: str) -> dict[str, Any]:
+    """Save the campaign's current state so the DM can return to it. Commits all changes
+    with the message 'Snapshot: <summary>' when the campaign is a git repository, and
+    otherwise writes a zip file to .campaign/snapshots/. Update WORKLOG.md and
+    OPEN_ITEMS.md before calling this so the snapshot includes them."""
+    with _reported():
+        return lifecycle.snapshot_campaign(_path(folder), summary)
 
 
 @server.tool()

@@ -22,18 +22,39 @@ Check:
   adventures and encounters.
 - Key NPCs, items, and locations appear in `npcs.md`, `items.md`, and
   `locations.md`, each linking to where they appear.
-- The agent explained the master/running-copy split.
+- The agent pointed you to `GETTING_STARTED.md` rather than a long
+  welcome in the chat, and it reads well in the Markdown preview.
+- `campaign.md` records D&D 5e (2024) in its Rules section.
+- Questions the agent raised appear in `OPEN_ITEMS.md`, and are checked off
+  when settled.
 - You were asked to approve file changes before they were written.
 
-### 2. Resume
+### 2. Encounters
 
-1. Close the conversation, start a new one in the same folder, and run
-   `/create-campaign` again.
+1. Open one of the encounter files.
 
-Check: the agent summarizes where the campaign stands instead of starting
-over.
+Check:
+- Every creature has a full stat block, not just a name like "thug".
+- Named NPCs who fight have their own stat block.
+- The file ends with an encounter tracker table with a row per creature,
+  and it prints sensibly from the Markdown preview.
 
-### 3. Maps
+### 3. Save and resume
+
+1. Mark one item in `OPEN_ITEMS.md` **(priority)**, then run
+   `/save-campaign`.
+2. Close VS Code, reopen the folder, start a new conversation, and run
+   `/create-campaign`.
+
+Check:
+- `/save-campaign` added a dated `WORKLOG.md` entry and took a snapshot
+  (a git commit, or a zip in `.campaign/snapshots/` without git).
+- On resume, the agent summarizes where things stood and suggests starting
+  with your priority item, instead of starting over.
+- The earlier conversation can be reopened from the past conversations
+  button in the Claude Code panel.
+
+### 4. Maps
 
 1. Save a PNG or JPEG map into `maps/`.
 2. Ask the agent to add it to an adventure, then ask it a question about
@@ -44,7 +65,7 @@ Check:
 - The answer uses what's on the map, and the agent says when it can't read
   something rather than guessing.
 
-### 4. Restructure
+### 5. Restructure
 
 1. Ask the agent to move an adventure to the other chapter, then to drop an
    encounter.
@@ -55,7 +76,7 @@ Check:
 - Afterwards `/check-campaign` reports no broken links, and the indexes
   point to the new locations.
 
-### 5. Check
+### 6. Check
 
 1. Break something by hand: rename an adventure file, add an unlinked
    image to `maps/`, or add an index entry with no link.
@@ -64,7 +85,7 @@ Check:
 Check: each problem is reported with a clickable file, and nothing is
 changed until you agree to a fix.
 
-### 6. Start a running copy
+### 7. Start a running copy
 
 1. In the master, run `/start-campaign` for a group called "Test Group".
 2. Try it again after making an uncommitted change to the master.
@@ -76,7 +97,14 @@ Check:
 - The second run refuses until the change is committed.
 - The third run refuses because it is already a running copy.
 
-### 7. Starting material (optional)
+### 8. Another rules edition (optional)
+
+1. In a new empty folder, run `/create-campaign` and ask for D&D 5e (2014).
+
+Check: `campaign.md` records the 2014 edition with the SRD 5.1 attribution,
+and stat blocks follow that edition.
+
+### 9. Starting material (optional)
 
 1. In a new empty folder, run `/create-campaign` and give the agent a text
    file or a PDF with selectable text as starting notes.

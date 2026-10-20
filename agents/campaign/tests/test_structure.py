@@ -124,3 +124,25 @@ def test_summary_describes_structure(campaign: Path) -> None:
     ]
     assert summary["maps"] == ["maps/cove.png", "maps/world.png"]
     assert summary["indexes"] == {"npcs.md": 1, "items.md": 0, "locations.md": 0}
+    assert summary["open_items"] == {"open": 3, "done": 0}
+    assert summary["missing_agent_files"] == []
+
+
+def test_open_items_are_counted_and_their_links_checked(campaign: Path) -> None:
+    path = campaign / "OPEN_ITEMS.md"
+    path.write_text("# Open items\n\n- [x] Goal (done 2026-10-20)\n- [ ] Map\n"
+                    "* [X] Done too\n- [ ] See [gone](chapters/gone.md)\n")
+    assert campaign_summary(campaign)["open_items"] == {"open": 2, "done": 2}
+    assert ("error", "OPEN_ITEMS.md", "Broken link to 'chapters/gone.md'.") in messages(campaign)
+
+
+def test_guide_and_worklog_links_are_not_checked(campaign: Path) -> None:
+    (campaign / "WORKLOG.md").write_text("Moved [old](chapters/old.md).\n")
+    (campaign / "GETTING_STARTED.md").write_text("[x](nowhere.md)\n")
+    assert messages(campaign) == []
+
+
+def test_missing_rules_edition_is_reported(campaign: Path) -> None:
+    path = campaign / "campaign.md"
+    path.write_text(path.read_text().replace("## Rules\n\nD&D 5e (2024).\n\n", ""))
+    assert any("rules edition is not recorded" in m for _, _, m in messages(campaign))

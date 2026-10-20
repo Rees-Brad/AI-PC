@@ -16,6 +16,11 @@ CHAPTER_FILE = "chapter.md"
 CHAPTERS_DIR = "chapters"
 MAPS_DIR = "maps"
 SESSIONS_DIR = "sessions"
+GETTING_STARTED_FILE = "GETTING_STARTED.md"
+OPEN_ITEMS_FILE = "OPEN_ITEMS.md"
+WORKLOG_FILE = "WORKLOG.md"
+# The guide is generated and the work log is history, so their links are not checked.
+UNCHECKED_FILES = {GETTING_STARTED_FILE, WORKLOG_FILE}
 INDEX_FILES = {
     "npcs.md": "Key NPCs",
     "items.md": "Key items",
@@ -29,6 +34,7 @@ _LINK = re.compile(r"(!?)\[[^\]]*\]\(\s*(<[^>]*>|[^)\s]+)(?:\s+\"[^\"]*\")?\s*\)
 _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _INLINE_CODE = re.compile(r"`[^`]*`")
 _EXTERNAL = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
+_CHECKBOX = re.compile(r"^\s*[-*+]\s+\[([ xX])\]\s")
 
 
 @dataclass
@@ -226,6 +232,8 @@ def check_campaign(root: Path) -> list[Issue]:
     links_from: dict[Path, set[Path]] = defaultdict(set)
     linked: set[Path] = set()
     for source in markdown_files(root):
+        if source.parent == root and source.name in UNCHECKED_FILES:
+            continue
         for link in extract_links(source):
             if link.resolved is None:
                 continue
@@ -271,11 +279,26 @@ def check_campaign(root: Path) -> list[Issue]:
         goal = _section_body(campaign_file, "Goal")
         if not goal or goal == PLACEHOLDER:
             add("warning", campaign_file, "The campaign has no goal yet.")
+        if not _section_body(campaign_file, "Rules"):
+            add("warning", campaign_file, "The rules edition is not recorded; add a Rules "
+                "section, such as 'D&D 5e (2024)'.")
     if not any(chapter.adventures for chapter in chapters):
         add("warning", root / CHAPTERS_DIR, "A campaign needs at least one adventure with at "
             "least one encounter.")
 
     return sorted(issues, key=lambda issue: issue.severity != "error")
+
+
+def open_items(path: Path) -> dict[str, int] | None:
+    """Count open and done checklist items, or None when the file is missing."""
+    if not path.is_file():
+        return None
+    counts = {"open": 0, "done": 0}
+    for _, line in visible_lines(path.read_text(encoding="utf-8", errors="replace")):
+        match = _CHECKBOX.match(line)
+        if match:
+            counts["open" if match.group(1) == " " else "done"] += 1
+    return counts
 
 
 def campaign_summary(root: Path) -> dict[str, object]:
@@ -302,6 +325,12 @@ def campaign_summary(root: Path) -> dict[str, object]:
             name: len(index_entries(root / name)) if (root / name).is_file() else None
             for name in INDEX_FILES
         },
+        "open_items": open_items(root / OPEN_ITEMS_FILE),
+        "missing_agent_files": [
+            name
+            for name in (GETTING_STARTED_FILE, OPEN_ITEMS_FILE, WORKLOG_FILE)
+            if not (root / name).is_file()
+        ],
         "sessions": sorted(p.name for p in sessions_dir.glob("*.md")) if sessions_dir.is_dir()
         else [],
     }

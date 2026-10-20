@@ -5,7 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from ai_campaign.lifecycle import create_campaign, slugify, start_campaign
+from ai_campaign.lifecycle import (
+    SRD_5_1_ATTRIBUTION,
+    SRD_5_2_ATTRIBUTION,
+    create_campaign,
+    ensure_campaign_docs,
+    slugify,
+    snapshot_campaign,
+    srd_attribution,
+    start_campaign,
+)
 from ai_campaign.marker import read_marker
 
 
@@ -21,6 +30,9 @@ def test_create_campaign_scaffolds_a_master(tmp_path: Path) -> None:
     assert result["created"] == [
         ".campaign/campaign.json",
         ".gitignore",
+        "GETTING_STARTED.md",
+        "OPEN_ITEMS.md",
+        "WORKLOG.md",
         "campaign.md",
         "chapters/.gitkeep",
         "items.md",
@@ -28,12 +40,16 @@ def test_create_campaign_scaffolds_a_master(tmp_path: Path) -> None:
         "maps/.gitkeep",
         "npcs.md",
     ]
+    assert result["rules"] == "D&D 5e (2024)"
     assert (root / "campaign.md").read_text().startswith("# The Sunken Crown\n")
     assert "[Key NPCs](npcs.md)" in (root / "campaign.md").read_text()
     assert "Add one entry per key NPC." in (root / "npcs.md").read_text()
     assert ".env" in (root / ".gitignore").read_text()
     marker = read_marker(root)
     assert marker is not None and marker.role == "master" and marker.title == "The Sunken Crown"
+    assert marker.rules == "D&D 5e (2024)"
+    assert "SRD 5.2" in (root / "campaign.md").read_text()
+    assert "# Getting started with The Sunken Crown" in (root / "GETTING_STARTED.md").read_text()
     assert result["git"] == "Not a git repository."
 
 
@@ -126,3 +142,56 @@ def test_slugify() -> None:
     assert slugify("Tuesday Night: Group #2!") == "tuesday-night-group-2"
     with pytest.raises(ValueError):
         slugify("!!!")
+
+
+def test_rules_edition_can_be_overridden(tmp_path: Path) -> None:
+    create_campaign(tmp_path / "old", "Old", rules="D&D 5e (2014)")
+    text = (tmp_path / "old/campaign.md").read_text()
+    assert "D&D 5e (2014)." in text and "SRD 5.1" in text
+    create_campaign(tmp_path / "other", "Other", rules="Homebrew d20")
+    text = (tmp_path / "other/campaign.md").read_text()
+    assert "Homebrew d20. Check the license" in text and "SRD" not in text
+
+
+def test_srd_attribution() -> None:
+    assert srd_attribution("D&D 5e (2024)") == SRD_5_2_ATTRIBUTION
+    assert srd_attribution("5e, SRD 5.1") == SRD_5_1_ATTRIBUTION
+    assert srd_attribution("Pathfinder") is None
+
+
+def test_ensure_campaign_docs_adds_only_missing_files(campaign: Path) -> None:
+    (campaign / "WORKLOG.md").unlink()
+    (campaign / "OPEN_ITEMS.md").write_text("# Mine\n")
+    result = ensure_campaign_docs(campaign)
+    assert result["created"] == ["WORKLOG.md"]
+    assert (campaign / "OPEN_ITEMS.md").read_text() == "# Mine\n"
+    assert ensure_campaign_docs(campaign)["created"] == []
+
+
+def test_snapshot_commits_in_git(tmp_path: Path) -> None:
+    root = tmp_path / "crown"
+    create_campaign(root, "Crown", init_git=True)
+    assert snapshot_campaign(root, "Nothing")["result"] == (
+        "Nothing has changed since the last commit."
+    )
+    (root / "campaign.md").write_text("# Crown\n\nMore.\n")
+    result = snapshot_campaign(root, "Draft the overview")
+    assert result["result"] == "Committed: Snapshot: Draft the overview"
+    assert git(root, "log", "-1", "--format=%s") == "Snapshot: Draft the overview"
+
+
+def test_snapshot_zips_without_git(campaign: Path) -> None:
+    import zipfile
+
+    first = snapshot_campaign(campaign, "First pass")
+    assert first["method"] == "zip"
+    names = zipfile.ZipFile(str(first["archive"])).namelist()
+    assert "campaign.md" in names and "SNAPSHOT.txt" in names
+    assert not any(name.startswith(".campaign/snapshots") for name in names)
+
+
+def test_snapshot_requires_campaign_and_summary(campaign: Path, tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="Describe"):
+        snapshot_campaign(campaign, "  ")
+    with pytest.raises(ValueError, match="no campaign marker"):
+        snapshot_campaign(tmp_path, "x")

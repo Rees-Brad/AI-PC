@@ -30,6 +30,7 @@ def campaign(tmp_path: Path) -> Path:
     write(
         root / "campaign.md",
         "# The Sunken Crown\n\n## Goal\n\nRecover the crown before the tide turns.\n\n"
+        "## Rules\n\nD&D 5e (2024).\n\n"
         f"## Chapters\n\n- [The Drowned Coast]({chapter}/chapter.md)\n\n"
         "![World](maps/world.png)\n",
     )

@@ -27,7 +27,10 @@ to read it.
 
 ```text
 <campaign>/
-  campaign.md                 overview, goal, central arc, links to chapters and indexes
+  campaign.md                 overview, goal, rules edition, central arc, links to chapters and indexes
+  GETTING_STARTED.md          the DM's guide to working with the agent
+  OPEN_ITEMS.md               checklist of open questions and unfinished work
+  WORKLOG.md                  journal of each working session
   npcs.md                     index of key NPCs
   items.md                    index of key magic items and artifacts
   locations.md                index of key locations
@@ -54,6 +57,76 @@ to read it.
   It may link to other files for context, but must not require them.
 - Keep planned events separate from events that happened in play. The
   Scribe's record is the source of truth for what happened.
+
+## Rules edition
+
+The `## Rules` section of `campaign.md` records the game system and edition.
+The default is D&D 5e (2024); use another edition only when the DM names
+one. Follow the recorded edition for every rule, creature, spell, and item.
+If `campaign.md` has no Rules section, ask the DM which edition to use
+(suggest D&D 5e 2024) and add it before writing stat blocks.
+
+## Creatures and stat blocks
+
+Every encounter must be runnable from its file alone, so every creature in
+it has a full stat block, never just a name like "thug" or "scout".
+
+- Give each different creature one stat block in the encounter, with how
+  many appear: size, type, and alignment; AC; HP (average and dice); speed;
+  the six ability scores with modifiers; saving throws and skills; damage
+  and condition immunities, resistances, and vulnerabilities; senses and
+  passive Perception; languages; CR and XP (and proficiency bonus); traits;
+  actions; bonus actions, reactions, and legendary actions where they apply.
+- A named NPC who fights, such as a bandit leader, gets their own stat block
+  built from a base creature, with their changes noted.
+- Take standard creatures only from the open-licensed System Reference
+  Document for the recorded edition (SRD 5.2 for D&D 5e 2024, SRD 5.1 for
+  5e 2014), using the names and statistics as they appear there. If a
+  creature is not in that SRD, write an original stat block instead. Never
+  copy stat blocks from other books; campaigns may be published and sold.
+- Keep the SRD attribution statement in the Rules section of
+  `campaign.md` whenever SRD material is used.
+- An adventure that includes a fight either contains the stat blocks or
+  includes the encounter's full text, so the DM never needs another file at
+  the table.
+
+## Encounter tracker
+
+End every encounter file with an `## Encounter tracker` table the DM can
+print and write on, with one row per individual creature:
+
+```markdown
+## Encounter tracker
+
+| Creature | AC | HP | Damage taken | Conditions | Initiative |
+|---|---|---|---|---|---|
+| Bandit 1 | 12 | 11 | | | |
+| Bandit 2 | 12 | 11 | | | |
+| Gant (thug) | 11 | 32 | | | |
+```
+
+Update the tracker whenever the creatures in the encounter change,
+including each difficulty variant (for example, add rows marked "if the
+first fight was too easy").
+
+## Open items and the work log
+
+- `OPEN_ITEMS.md` is the DM's to-do list. Whenever you raise a question, leave
+  a placeholder, or note something to come back to, add a `- [ ]` item under
+  the right heading, linking to the file it concerns. When it is resolved,
+  check it off (`- [x]`) and add the date, such as `(done 2026-10-20)`. Move
+  long runs of done items under `## Done`.
+- Respect the DM's edits to `OPEN_ITEMS.md`: their order, items they mark
+  **(priority)**, and items they add. When asked what to work on, start
+  with their priorities.
+- `WORKLOG.md` is a journal, newest entry first. At the end of a working
+  session (`/save-campaign`), add a dated entry: what was done, decisions
+  made and why, and ideas set aside. Keep entries short; the campaign files
+  hold the detail.
+- At natural stopping points, such as finishing a chapter or after a long
+  stretch of work, offer to run `/save-campaign`.
+- `GETTING_STARTED.md` is the DM's reference guide. Do not change it unless
+  asked.
 
 ## Indexes
 
@@ -113,6 +186,7 @@ time.
   Read text files directly and use the `extract_pdf_text` tool for PDFs.
   Scanned PDFs without selectable text are not supported.
 - Creation can span many sessions. The files are the saved state; sections
-  can start as placeholders (`_To be written._`) and be filled in later.
-- If the master is a git repository, offer to commit at natural
-  checkpoints, with a short message describing the change.
+  can start as placeholders (`_To be written._`) and be filled in later,
+  with an open item for each.
+- Save progress with `/save-campaign` rather than separate commits, so the
+  work log and open items stay in step with the files.

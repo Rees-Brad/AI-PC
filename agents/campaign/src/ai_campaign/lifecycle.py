@@ -1,25 +1,46 @@
-"""Create master campaigns and start running copies from them."""
+"""Create master campaigns, start running copies, and snapshot work in progress."""
 
 from __future__ import annotations
 
 import re
 import shutil
 import subprocess
-from datetime import date
+import zipfile
+from datetime import date, datetime
 from pathlib import Path
 
 from ai_campaign.marker import CampaignMarker, read_marker, write_marker
 from ai_campaign.structure import (
     CAMPAIGN_FILE,
     CHAPTERS_DIR,
+    GETTING_STARTED_FILE,
     INDEX_FILES,
     MAPS_DIR,
+    OPEN_ITEMS_FILE,
     PLACEHOLDER,
     SESSIONS_DIR,
+    WORKLOG_FILE,
 )
+
+DEFAULT_RULES = "D&D 5e (2024)"
+SNAPSHOTS_DIR = Path(".campaign") / "snapshots"
 
 # Files a new, otherwise empty campaign folder may already contain.
 ALLOWED_IN_NEW_FOLDER = {".git", ".vscode", ".DS_Store"}
+
+SRD_5_2_ATTRIBUTION = (
+    "This work includes material from the System Reference Document 5.2 (\"SRD 5.2\") by "
+    "Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is "
+    "licensed under the Creative Commons Attribution 4.0 International License, available "
+    "at https://creativecommons.org/licenses/by/4.0/legalcode."
+)
+SRD_5_1_ATTRIBUTION = (
+    "This work includes material taken from the System Reference Document 5.1 (\"SRD 5.1\") "
+    "by Wizards of the Coast LLC and available at "
+    "https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed "
+    "under the Creative Commons Attribution 4.0 International License available at "
+    "https://creativecommons.org/licenses/by/4.0/legalcode."
+)
 
 GITIGNORE = """\
 # Secrets never belong in a campaign.
@@ -28,6 +49,9 @@ GITIGNORE = """\
 # The Scribe's database and working data. Whether the database should be
 # committed is still an open question, so it is excluded for now.
 .scribe/
+
+# Zip snapshots, used only when the campaign is not a git repository.
+.campaign/snapshots/
 """
 
 INDEX_DESCRIPTIONS = {
@@ -50,12 +74,141 @@ Add one entry per key {kind}. Full details stay in the linked sections.
 -->
 """
 
+GETTING_STARTED = """\
+# Getting started with {title}
+
+The Campaign Agent works with you on this campaign in the Claude Code panel.
+Talk to it in plain language; it asks questions, offers options, and drafts
+the files. You make the decisions, and every change is shown to you for
+approval before it is written.
+
+## Commands
+
+- `/create-campaign`: resume work on this campaign. The agent reads the
+  work log and open items and suggests what to do next.
+- `/check-campaign`: look for broken links, unlinked maps, and other
+  structure problems. It changes nothing.
+- `/save-campaign`: save your progress. The agent updates the work log and
+  open items, checks the campaign, and takes a snapshot.
+- `/start-campaign`: when the campaign is ready to play, make a running
+  copy for a group.
+
+Claude Code may show these with a prefix, such as
+`/campaign-agent:create-campaign`.
+
+## Working across several days
+
+Building a campaign takes many sittings.
+
+- Before you stop, run `/save-campaign`. The agent records what was done
+  and decided in `WORKLOG.md`, updates `OPEN_ITEMS.md`, and takes a
+  snapshot you can return to.
+- Next time, open this folder and run `/create-campaign`. The agent picks
+  up from the work log and open items.
+- Earlier conversations are saved too. Reopen one from the past
+  conversations button in the Claude Code panel, or with `/resume`.
+
+## Files the agent keeps for you
+
+- `OPEN_ITEMS.md` lists open questions and unfinished parts. The agent
+  checks items off as they are done. Reorder items or mark them
+  **(priority)** to tell the agent what to work on first, and add your own.
+- `WORKLOG.md` is a short journal of each working session: what was done,
+  what was decided and why, and ideas set aside for later.
+- This file is a reference you can return to at any time.
+
+## Your campaign folder
+
+```text
+campaign.md        goal, overview, rules edition, and links to every chapter
+npcs.md            key NPCs
+items.md           key magic items and artifacts
+locations.md       key locations
+maps/              map images (PNG, JPEG, or WebP)
+chapters/
+  01-<chapter>/
+    chapter.md     the chapter outline
+    adventures/    one file per adventure
+    encounters/    one file per encounter, with stat blocks and a tracker
+```
+
+Every section is its own file, numbered in story order.
+
+## A good layout in VS Code
+
+- Keep the Explorer open on the left to see the whole campaign.
+- Open a chapter, adventure, or encounter and press Ctrl+Shift+V
+  (Cmd+Shift+V on a Mac) to read it as formatted text.
+- Open the section's map beside it: drag the map's tab to the side of the
+  editor.
+- Keep the Claude Code panel open on the right.
+
+## Maps
+
+Make and edit maps in any tool, then save them into `maps/` as PNG, JPEG,
+or WebP. Ask the agent to add a map to a section, and to answer questions
+about it. Saving an edited map under the same name keeps every link to it
+working.
+
+## Master and running copies
+
+This folder is the **master** campaign: the campaign as written. Games are
+not run from it, because game sessions and the updates after them change
+the files. When the campaign is ready to play, `/start-campaign` makes a
+**running copy** for one group next to this folder, and you open that copy
+to run the group's games. The master can start any number of groups.
+"""
+
+OPEN_ITEMS = f"""\
+# Open items
+
+The Campaign Agent keeps this list up to date as you work and checks items
+off when they are done. Reorder items or mark them **(priority)** to tell
+the agent what to work on first, and add your own at any time.
+
+## Story and goal
+
+- [ ] Decide the campaign's goal. ([campaign.md]({CAMPAIGN_FILE}))
+- [ ] Write the overview and central story arc. ([campaign.md]({CAMPAIGN_FILE}))
+- [ ] Outline the chapters.
+
+## Chapters
+
+## NPCs, items, and locations
+
+## Maps
+
+## Done
+"""
+
+WORKLOG = """\
+# Work log
+
+The Campaign Agent adds an entry at the end of each working session: what
+was done, what was decided and why, and ideas set aside for later. Newest
+entries come first.
+
+## {today}
+
+- Created the campaign.
+"""
+
 
 def slugify(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     if not slug:
         raise ValueError("The name must contain at least one letter or digit.")
     return slug
+
+
+def srd_attribution(rules: str) -> str | None:
+    """The attribution statement for the open-licensed SRD that matches a rules edition."""
+    lowered = rules.lower()
+    if "2024" in lowered or "5.2" in lowered:
+        return SRD_5_2_ATTRIBUTION
+    if "2014" in lowered or "5.1" in lowered:
+        return SRD_5_1_ATTRIBUTION
+    return None
 
 
 def _git(folder: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -76,12 +229,24 @@ def _commit_all(folder: Path, message: str) -> str:
     return f"Committed: {message}"
 
 
-def _campaign_md(title: str) -> str:
+def _campaign_md(title: str, rules: str) -> str:
     index_links = "\n".join(f"- [{label}]({name})" for name, label in INDEX_FILES.items())
+    attribution = srd_attribution(rules)
+    if attribution:
+        rules_text = (
+            f"{rules}. Stat blocks come from the open-licensed System Reference Document "
+            f"for this edition, or are original.\n\n{attribution}"
+        )
+    else:
+        rules_text = (
+            f"{rules}. Check the license of any game-system material reproduced in this "
+            "campaign before sharing or selling it."
+        )
     return (
         f"# {title}\n\n"
         f"## Goal\n\n{PLACEHOLDER}\n\n"
         f"## Overview\n\n{PLACEHOLDER}\n\n"
+        f"## Rules\n\n{rules_text}\n\n"
         f"## Chapters\n\n{PLACEHOLDER}\n\n"
         f"## Indexes\n\n{index_links}\n"
     )
@@ -93,11 +258,36 @@ def _index_md(name: str) -> str:
     return f"# {label}\n\n{INDEX_DESCRIPTIONS[name]}\n\n" + INDEX_ENTRY_EXAMPLE.format(kind=kind)
 
 
-def create_campaign(folder: Path, title: str, init_git: bool = False) -> dict[str, object]:
+def _agent_docs(title: str) -> dict[str, str]:
+    return {
+        GETTING_STARTED_FILE: GETTING_STARTED.format(title=title),
+        OPEN_ITEMS_FILE: OPEN_ITEMS,
+        WORKLOG_FILE: WORKLOG.format(today=date.today().isoformat()),
+    }
+
+
+def _write_files(folder: Path, files: dict[str, str]) -> None:
+    for relative, content in files.items():
+        path = folder / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+
+def _require_campaign(folder: Path) -> CampaignMarker:
+    marker = read_marker(folder)
+    if marker is None:
+        raise ValueError(f"{folder} is not a campaign; it has no campaign marker.")
+    return marker
+
+
+def create_campaign(
+    folder: Path, title: str, init_git: bool = False, rules: str = DEFAULT_RULES
+) -> dict[str, object]:
     """Set up a new master campaign in an empty or new folder."""
     title = " ".join(title.split())
     if not title:
         raise ValueError("The campaign needs a title.")
+    rules = " ".join(rules.split()) or DEFAULT_RULES
     folder = folder.expanduser().resolve()
     if folder == Path(folder.anchor):
         raise ValueError("A campaign cannot be created at the filesystem root.")
@@ -114,17 +304,17 @@ def create_campaign(folder: Path, title: str, init_git: bool = False) -> dict[st
             )
 
     files = {
-        CAMPAIGN_FILE: _campaign_md(title),
+        CAMPAIGN_FILE: _campaign_md(title, rules),
         **{name: _index_md(name) for name in INDEX_FILES},
+        **_agent_docs(title),
         ".gitignore": GITIGNORE,
         f"{MAPS_DIR}/.gitkeep": "",
         f"{CHAPTERS_DIR}/.gitkeep": "",
     }
-    for relative, content in files.items():
-        path = folder / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
-    marker = CampaignMarker(role="master", title=title, created=date.today().isoformat())
+    _write_files(folder, files)
+    marker = CampaignMarker(
+        role="master", title=title, created=date.today().isoformat(), rules=rules
+    )
     marker_path = write_marker(folder, marker)
 
     git_status = "Not a git repository."
@@ -136,7 +326,26 @@ def create_campaign(folder: Path, title: str, init_git: bool = False) -> dict[st
         git_status = _commit_all(folder, f"Create campaign: {title}")
 
     created = sorted([*files, marker_path.relative_to(folder).as_posix()])
-    return {"folder": str(folder), "role": "master", "created": created, "git": git_status}
+    return {
+        "folder": str(folder),
+        "role": "master",
+        "rules": rules,
+        "created": created,
+        "git": git_status,
+    }
+
+
+def ensure_campaign_docs(folder: Path) -> dict[str, object]:
+    """Add GETTING_STARTED.md, OPEN_ITEMS.md, and WORKLOG.md if missing; never overwrite."""
+    folder = folder.expanduser().resolve()
+    marker = _require_campaign(folder)
+    missing = {
+        name: content
+        for name, content in _agent_docs(marker.title).items()
+        if not (folder / name).exists()
+    }
+    _write_files(folder, missing)
+    return {"folder": str(folder), "created": sorted(missing)}
 
 
 def start_campaign(
@@ -144,9 +353,7 @@ def start_campaign(
 ) -> dict[str, object]:
     """Make a running copy of a master campaign for a group."""
     master = master.expanduser().resolve()
-    marker = read_marker(master)
-    if marker is None:
-        raise ValueError(f"{master} is not a campaign; it has no campaign marker.")
+    marker = _require_campaign(master)
     if marker.role != "master":
         source = f" Start from its master instead: {marker.source_master}" if (
             marker.source_master
@@ -184,7 +391,9 @@ def start_campaign(
             raise ValueError(f"git clone failed: {clone.stderr.strip()}")
     else:
         shutil.copytree(
-            master, destination, ignore=shutil.ignore_patterns(".git", ".scribe", SESSIONS_DIR)
+            master,
+            destination,
+            ignore=shutil.ignore_patterns(".git", ".scribe", SESSIONS_DIR, "snapshots"),
         )
 
     (destination / SESSIONS_DIR).mkdir(exist_ok=True)
@@ -206,4 +415,35 @@ def start_campaign(
         "group": group,
         "method": "git clone" if uses_git else "folder copy",
         "git": git_status,
+    }
+
+
+def snapshot_campaign(folder: Path, summary: str) -> dict[str, object]:
+    """Save the campaign's current state: a git commit, or a zip file without git."""
+    folder = folder.expanduser().resolve()
+    _require_campaign(folder)
+    summary = " ".join(summary.split())
+    if not summary:
+        raise ValueError("Describe what this snapshot contains in a few words.")
+
+    if (folder / ".git").exists():
+        if not _git(folder, "status", "--porcelain").stdout.strip():
+            return {"method": "git", "result": "Nothing has changed since the last commit."}
+        result = _commit_all(folder, f"Snapshot: {summary}")
+        head = _git(folder, "rev-parse", "--short", "HEAD").stdout.strip()
+        return {"method": "git", "result": result, "commit": head}
+
+    snapshots = folder / SNAPSHOTS_DIR
+    snapshots.mkdir(parents=True, exist_ok=True)
+    archive = snapshots / f"{datetime.now().strftime('%Y-%m-%d-%H%M%S')}.zip"
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
+        bundle.writestr("SNAPSHOT.txt", summary + "\n")
+        for path in sorted(folder.rglob("*")):
+            relative = path.relative_to(folder)
+            if path.is_file() and not relative.is_relative_to(SNAPSHOTS_DIR):
+                bundle.write(path, relative.as_posix())
+    return {
+        "method": "zip",
+        "result": f"Saved {archive.relative_to(folder).as_posix()}",
+        "archive": str(archive),
     }

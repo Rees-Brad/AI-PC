@@ -12,6 +12,7 @@ This version supports:
 |---|---|
 | `/create-campaign` | Starts a new master campaign in an empty folder, or resumes one. |
 | `/check-campaign` | Reports broken links, unlinked maps, index entries that point nowhere, sections missing from their outlines, and numbering problems, without changing anything. |
+| `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot. |
 | `/start-campaign` | Makes a running copy of a master campaign for a group. |
 
 Claude Code may show the commands with the plugin name as a prefix, such as
@@ -75,15 +76,43 @@ directly from it. After `git pull`, start a new session to pick up changes.
 ## Use
 
 1. Open an empty folder in VS Code and run `/create-campaign`. The agent
-   sets up `campaign.md`, the NPC, item, and location indexes, and the
-   `maps/` and `chapters/` folders, then develops the campaign with you. It
-   recommends making the campaign a git repository.
-2. Keep the Explorer, the Markdown preview, and a map open beside the
+   sets up `campaign.md`, the NPC, item, and location indexes, the `maps/`
+   and `chapters/` folders, and three working documents, then develops the
+   campaign with you. It recommends making the campaign a git repository.
+   Campaigns use D&D 5e (2024) rules unless you name another edition.
+2. Read `GETTING_STARTED.md` (press Ctrl+Shift+V for the formatted view).
+   It keeps the introduction from scrolling away in the chat.
+3. Keep the Explorer, the Markdown preview, and a map open beside the
    conversation. Save maps as PNG, JPEG, or WebP into `maps/`.
-3. Run `/check-campaign` at any time. A new campaign reports that it has no
+4. Run `/check-campaign` at any time. A new campaign reports that it has no
    goal and no adventure yet; that is expected.
-4. When the campaign is ready to play, run `/start-campaign` from the
+5. Before you stop, run `/save-campaign`. Next time, open the folder and
+   run `/create-campaign` to pick up where you left off.
+6. When the campaign is ready to play, run `/start-campaign` from the
    master.
+
+### Working documents
+
+| File | What it is |
+|---|---|
+| `GETTING_STARTED.md` | Your guide to the commands, saving and resuming, the VS Code layout, maps, and master and running copies. |
+| `OPEN_ITEMS.md` | Open questions and unfinished work. The agent checks items off as they are done. Reorder items or mark them **(priority)** to steer what it works on. |
+| `WORKLOG.md` | A short journal of each working session: what was done and decided, and ideas set aside. |
+
+`/save-campaign` snapshots the campaign as a git commit, or as a zip file in
+`.campaign/snapshots/` when the campaign is not a git repository. Your
+conversations are saved by Claude Code too: reopen one from the past
+conversations button in the Claude Code panel, or with `/resume`.
+
+Campaigns created with an earlier version get the working documents added
+the next time you run `/create-campaign` in them.
+
+### Encounters
+
+Every encounter has full stat blocks for its creatures, taken from the
+open-licensed SRD for the campaign's rules edition or written new, and ends
+with a printable encounter tracker for AC, HP, damage, conditions, and
+initiative.
 
 ### Master campaigns and running copies
 
@@ -137,7 +166,7 @@ new session. To load the plugin without installing it, start the CLI with
 | `plugin/.claude-plugin/plugin.json` | Plugin manifest and the Python interpreter option |
 | `plugin/.mcp.json` | Starts the MCP server |
 | `plugin/skills/campaign-rules/` | Rules the agent follows in any campaign folder |
-| `plugin/skills/create-campaign/`, `check-campaign/`, `start-campaign/` | The commands |
+| `plugin/skills/create-campaign/`, `check-campaign/`, `save-campaign/`, `start-campaign/` | The commands |
 | `src/ai_campaign/mcp_server.py` | MCP tools |
 | `src/ai_campaign/structure.py` | Reading and checking campaign folders |
 | `src/ai_campaign/lifecycle.py` | Creating masters and starting running copies |

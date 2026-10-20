@@ -18,6 +18,7 @@ class CampaignMarker:
     title: str
     created: str
     format_version: int = FORMAT_VERSION
+    rules: str | None = None
     edition: str | None = None
     source_master: str | None = None
     source_commit: str | None = None

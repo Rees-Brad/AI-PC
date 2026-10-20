@@ -15,7 +15,9 @@ def test_server_registers_campaign_tools() -> None:
         "campaign_status",
         "check_campaign",
         "create_campaign",
+        "ensure_campaign_docs",
         "extract_pdf_text",
+        "snapshot_campaign",
         "start_campaign",
     ]
 
@@ -31,6 +33,9 @@ def test_tools_create_check_and_start(tmp_path: Path, monkeypatch: pytest.Monkey
     report = mcp_server.check_campaign("crown")
     assert report["errors"] == 0
     assert report["warnings"] == len(report["issues"]) > 0
+
+    assert mcp_server.ensure_campaign_docs("crown")["created"] == []
+    assert mcp_server.snapshot_campaign("crown", "First draft")["method"] == "zip"
 
     started = mcp_server.start_campaign("crown", "Tuesday")
     assert started["folder"] == str(tmp_path / "crown--tuesday")
