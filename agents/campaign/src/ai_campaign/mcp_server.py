@@ -10,7 +10,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from ai_campaign import lifecycle, structure
+from ai_campaign import gitops, lifecycle, structure
 from ai_campaign.pdf import extract_pdf_text as _extract_pdf_text
 
 server = MCPServer(
@@ -43,9 +43,15 @@ def _path(value: str) -> Path:
 @server.tool()
 def campaign_status(folder: str) -> dict[str, Any]:
     """Report whether a folder is a master campaign, a running copy, or not a campaign,
-    and summarize its chapters, adventures, encounters, maps, indexes, and sessions."""
+    and summarize its chapters, adventures, encounters, maps, indexes, and sessions, plus
+    how it uses git: whether it is a repository, a collection of campaigns, or registered in
+    a collection, and any submodules it contains."""
     with _reported():
-        return structure.campaign_summary(_path(folder))
+        path = _path(folder)
+        summary = structure.campaign_summary(path)
+        summary["is_collection"] = gitops.is_collection(path)
+        summary["git"] = gitops.info(path)
+        return summary
 
 
 @server.tool()
@@ -65,17 +71,34 @@ def check_campaign(folder: str) -> dict[str, Any]:
 
 @server.tool()
 def create_campaign(
-    folder: str, title: str, init_git: bool = False, rules: str = lifecycle.DEFAULT_RULES
+    folder: str, title: str, git: str = "none", rules: str = lifecycle.DEFAULT_RULES
 ) -> dict[str, Any]:
     """Set up a new master campaign in an empty or new folder: campaign.md (with the rules
     edition and its SRD attribution), the NPC, item, and location indexes, maps/ and
     chapters/ folders, GETTING_STARTED.md, OPEN_ITEMS.md, WORKLOG.md, the campaign marker,
     and a .gitignore. The rules edition defaults to D&D 5e (2024); pass another only when
-    the DM names one. With init_git, the folder is made a git repository and committed."""
+    the DM names one. git is 'none', 'repo' (the campaign is its own git repository), or
+    'submodule' (its own repository, added to the collection whose folder contains it)."""
     with _reported():
-        return lifecycle.create_campaign(
-            _path(folder), title, init_git=init_git, rules=rules
-        )
+        return lifecycle.create_campaign(_path(folder), title, git=git, rules=rules)
+
+
+@server.tool()
+def create_collection(folder: str, title: str) -> dict[str, Any]:
+    """Make a folder a collection of campaigns: a git repository in which each campaign is a
+    submodule. Works on a new folder or one that already holds campaigns, and lists the
+    campaigns found so they can be added with add_to_collection."""
+    with _reported():
+        return gitops.create_collection(_path(folder), title)
+
+
+@server.tool()
+def add_to_collection(campaign_folder: str) -> dict[str, Any]:
+    """Add an existing campaign or running copy that sits inside a collection's folder to
+    that collection as a submodule. A campaign that is not yet a git repository is made one
+    first; one with uncommitted changes must be saved first."""
+    with _reported():
+        return gitops.add_to_collection(_path(campaign_folder))
 
 
 @server.tool()

@@ -17,13 +17,15 @@ argument-hint: "[group name]"
 
 3. Ask for the group's name, unless one was given: $ARGUMENTS
 
-4. If the master is a git repository with uncommitted changes, show them and
-   offer to commit them first. The running copy is cloned from the last
-   commit, so uncommitted work would be left out.
+4. If the master is a git repository with uncommitted changes, show them
+   and offer to save them first with `/save-campaign`. The running copy is
+   cloned from the last commit, so uncommitted work would be left out.
 
 5. Tell the DM where the copy will be created. The default is next to the
    master, named `<master>--<group>`. Ask whether that is fine or whether
-   they want another location.
+   they want another location. If the master is in a collection
+   (`git.registered_in` is set), say that a copy created inside the
+   collection's folder is added to the collection too.
 
 6. Call `start_campaign` with the master folder, the group name, and the
    destination if the DM chose one.
