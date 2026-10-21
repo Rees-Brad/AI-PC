@@ -93,6 +93,7 @@ the agent does not require editing every campaign.
 | `/end-session` | Ends Game Session Mode: tells the Scribe to finalize the session and leave the channel, then offers to begin Update Mode. |
 | `/update-campaign` | Works through the latest session with the DM and the Scribe and proposes changes to the remaining campaign. |
 | `/check-campaign` | Reports broken links, unlinked maps, index entries that point nowhere, and structure problems without changing anything. |
+| `/create-collection` | Makes a folder of campaigns a git repository, with each campaign as a submodule (see Collections). |
 | `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot (see Working Documents). |
 
 Command names are working names and can change during design. Because the
@@ -159,6 +160,34 @@ workflow also works with plain folders.
 - Secrets and the Scribe's working data are excluded from commits by the
   campaign's `.gitignore`.
 - Without git, the DM loses history and diffs but nothing else.
+
+### Collections
+
+A collection is a folder of independent campaigns that is a git repository,
+with each campaign as its own repository registered as a submodule. A DM
+might keep one collection for level 1–3 campaigns and another for level 5–7.
+Nothing ties the campaigns in a collection together.
+
+- When a campaign is created, the DM chooses no git, its own repository, or
+  its own repository added to the collection that contains it. Existing
+  campaigns inside the folder can be added later.
+- Starting a running copy clones the master with any submodules it has and
+  puts each on a branch, so later commits are not left detached.
+- "Uncommitted changes" checks include changes inside submodules.
+- Saving (`/save-campaign`) commits inside any submodules first, deepest
+  first, then the campaign, then the campaign's entry in its collection.
+  This works at any depth, which epic campaigns (Release 2) build on.
+- Git blocks local submodule copies by default. The agent's tools allow
+  them for their own commands; a DM running git by hand adds
+  `-c protocol.file.allow=always`. The agent does not change the DM's git
+  configuration.
+
+Current beta defaults, to be revisited after beta testing:
+
+| Choice | Default | Alternatives considered |
+|---|---|---|
+| Where a running copy goes in a collection | Inside the collection, added as a submodule | Outside the collection; ask each time |
+| How submodule locations are recorded | Relative local paths, so a clone fetches submodules from the folder it was cloned from | Remote URLs such as GitHub; local now with a publish step later |
 
 ## Operating Modes
 
@@ -784,6 +813,58 @@ campaign folder so a DM can run it with the agent.
   master beside the old one and choose which changes to bring into their
   running copy.
 
+## Release 2 (future): Epic Campaigns
+
+Not part of the first release. An epic is a long campaign told as a series
+of books, like a fantasy series where each book is a full story but
+characters, places, and threads carry from one to the next. It builds on the
+same repositories-within-repositories as collections, but its parts are tied
+together.
+
+| Structure | Parent | Submodules | Tied together? |
+|---|---|---|---|
+| Collection (first release) | A folder of campaigns | Independent campaigns | No |
+| Epic | The epic | Books, in order | Yes |
+| Large book | A book of an epic | Parts of the book | Yes |
+
+### Epics: books as submodules
+
+- The epic's folder holds `epic.md`: the overarching story, the books in
+  reading order, and each book's level range.
+- Each book is a full campaign with its own `campaign.md`, chapters, and
+  indexes, registered as a submodule of the epic.
+- **Epic-wide index.** The epic has NPC, item, and location indexes across
+  all books. Each entry says which books it appears in and its status at
+  the end of each, such as "dies in Book 3".
+- **Cross-book consistency checks.**
+  - Structural checks by the tools: an indexed NPC appearing in a book
+    after the book where they die, an item held by two characters at once,
+    broken links between books, books missing from `epic.md`.
+  - Story review by the agent: timeline, character motivations, and
+    foreshadowing that is never paid off. The agent reports findings; the
+    DM decides.
+- Moving part of a book out into a new book is the same operation as
+  making part of a book its own submodule (below); the epic's index and
+  checks are updated to match.
+
+### Large books: a book in parts
+
+A book too large for one repository can be split into parts, each its own
+repository registered as a submodule of the book, such as one or more
+chapters per part. The book's `campaign.md` and indexes still describe the
+whole book, and its checks cover all its parts. Saving and starting already
+handle submodules at any depth.
+
+### Epic open questions
+
+- **Running an epic.** A group plays Book 1, then continues into Book 2.
+  Does the running copy, and the Scribe's record, live at the epic level so
+  that Book 2 remembers what happened in Book 1? Or is each book started
+  separately, carrying the record forward?
+- How the party's state at the end of one book (levels, items, NPC
+  relationships) is handed to the next.
+- Whether a book can belong to more than one epic.
+
 ## Later Releases (Release 3 or later)
 
 - **Import campaign PDFs made by other tools.** Campaign PDFs are produced
@@ -817,3 +898,10 @@ of experience the players should have.
   revises only what lies ahead?
 - Should the Scribe's database in `.scribe/` be committed with the
   campaign, or excluded and backed up separately?
+- **User Guide (to discuss).** A User Guide that explains the agent in
+  depth for DMs and authors: what it does, how to work with it across
+  creation, game sessions, and updates, and the different campaign options
+  (a single campaign, collections, and later epics and large books), with
+  when to choose each. Its scope, audience, and format, and how it relates
+  to the README, TESTING.md, and each campaign's `GETTING_STARTED.md`, are
+  still to be discussed.

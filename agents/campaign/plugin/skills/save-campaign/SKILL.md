@@ -26,7 +26,8 @@ Follow the `campaign-rules` skill throughout.
    fix them now or save as is; note any left unfixed in `OPEN_ITEMS.md`.
 
 5. Call `snapshot_campaign` with a summary of a few words, such as
-   "Chapter 2 encounters drafted".
+   "Chapter 2 encounters drafted". With git, it commits the campaign and
+   then the campaign's entry in its collection, if it is in one.
 
 6. Tell the DM in two or three lines what was saved, how many open items
    remain (and the top priority), and that `/create-campaign` will pick up

@@ -12,6 +12,7 @@ This version supports:
 |---|---|
 | `/create-campaign` | Starts a new master campaign in an empty folder, or resumes one. |
 | `/check-campaign` | Reports broken links, unlinked maps, index entries that point nowhere, sections missing from their outlines, and numbering problems, without changing anything. |
+| `/create-collection` | Makes a folder of campaigns a git repository, with each campaign as a submodule. |
 | `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot. |
 | `/start-campaign` | Makes a running copy of a master campaign for a group. |
 
@@ -91,6 +92,23 @@ directly from it. After `git pull`, start a new session to pick up changes.
 6. When the campaign is ready to play, run `/start-campaign` from the
    master.
 
+### Collections
+
+With git you can keep related campaigns together. Run `/create-collection`
+in a folder of campaigns, such as `~/Campaigns/levels-1-3`. It becomes a git
+repository, and each campaign in it stays its own independent repository,
+registered as a submodule. New campaigns created inside it and running
+copies started from them are added automatically. Make as many collections
+as you like, for example one per level range.
+
+`/save-campaign` and `/start-campaign` handle the submodules for you. If you
+run git yourself, add `-c protocol.file.allow=always` to submodule commands
+such as `git clone --recurse-submodules`: git blocks local submodule copies
+by default, and the agent leaves your git configuration alone.
+
+Splitting one large campaign across repositories, as the books of an epic
+or a book in parts, is planned for Release 2.
+
 ### Working documents
 
 | File | What it is |
@@ -138,6 +156,7 @@ edit it by hand.
 | The commands don't appear | Reload VS Code. Check `claude plugin list` shows `campaign-agent@ai-pc` as enabled. |
 | `campaign` server not connected | Run `claude mcp list`. Check the Python interpreter option points at the Python where you installed the package: `claude plugin configure campaign-agent@ai-pc`. |
 | `No module named ai_campaign` | The configured Python does not have the package. Repeat step 1 with that Python. |
+| `transport 'file' not allowed` from git | Add `-c protocol.file.allow=always` to submodule commands you run yourself. |
 | Committing fails inside a campaign | Set your git identity: `git config --global user.name` and `user.email`. |
 
 To uninstall:
@@ -169,6 +188,7 @@ new session. To load the plugin without installing it, start the CLI with
 | `plugin/skills/create-campaign/`, `check-campaign/`, `save-campaign/`, `start-campaign/` | The commands |
 | `src/ai_campaign/mcp_server.py` | MCP tools |
 | `src/ai_campaign/structure.py` | Reading and checking campaign folders |
-| `src/ai_campaign/lifecycle.py` | Creating masters and starting running copies |
+| `src/ai_campaign/lifecycle.py` | Creating masters, starting running copies, and snapshots |
+| `src/ai_campaign/gitops.py` | Git: repositories and collections |
 | `src/ai_campaign/marker.py` | The `.campaign/campaign.json` marker |
 | `src/ai_campaign/pdf.py` | Text extraction from PDF starting material |

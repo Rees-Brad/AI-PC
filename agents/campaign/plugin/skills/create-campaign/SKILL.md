@@ -37,9 +37,16 @@ Follow the `campaign-rules` skill throughout.
    - If the folder is empty apart from `.vscode` or `.git`, create the
      campaign here. Otherwise propose a new subfolder named after the title,
      such as `./the-sunken-crown`, and confirm it with the DM.
-   - Ask whether to make the campaign a git repository. Recommend it: git
-     keeps the history of every change and every snapshot, and running
-     copies are made with `git clone`.
+   - Choose how the campaign uses git. Check `campaign_status` for the
+     folder: if `git.inside_collection` is set, the folder is inside a
+     collection of campaigns.
+     - Inside a collection, recommend `git="submodule"`: the campaign gets
+       its own repository and is added to the collection.
+     - Otherwise recommend `git="repo"`: git keeps the history of every
+       change and snapshot, and running copies are made with `git clone`.
+       Mention that `/create-collection` can organize several campaigns
+       in one folder.
+     - `git="none"` works too, with zip snapshots instead of history.
    - Call `create_campaign` with the absolute folder path, the title, the
      git choice, and `rules` if the DM named an edition.
    - If you created a subfolder, tell the DM to open it in VS Code

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import re
 import shutil
-import subprocess
 import zipfile
 from datetime import date, datetime
 from pathlib import Path
 
+from ai_campaign import gitops
 from ai_campaign.marker import CampaignMarker, read_marker, write_marker
 from ai_campaign.structure import (
     CAMPAIGN_FILE,
@@ -23,6 +23,9 @@ from ai_campaign.structure import (
 )
 
 DEFAULT_RULES = "D&D 5e (2024)"
+# How a new campaign uses git: not at all, as its own repository, or as its own
+# repository registered in the collection that contains it.
+GIT_MODES = ("none", "repo", "submodule")
 SNAPSHOTS_DIR = Path(".campaign") / "snapshots"
 
 # Files a new, otherwise empty campaign folder may already contain.
@@ -92,6 +95,8 @@ approval before it is written.
   open items, checks the campaign, and takes a snapshot.
 - `/start-campaign`: when the campaign is ready to play, make a running
   copy for a group.
+- `/create-collection`: organize a folder of campaigns as one git
+  repository (see Git and collections).
 
 Claude Code may show these with a prefix, such as
 `/campaign-agent:create-campaign`.
@@ -149,6 +154,25 @@ Make and edit maps in any tool, then save them into `maps/` as PNG, JPEG,
 or WebP. Ask the agent to add a map to a section, and to answer questions
 about it. Saving an edited map under the same name keeps every link to it
 working.
+
+## Git and collections
+
+If the campaign uses git, every snapshot is a commit you can return to, and
+VS Code's Source Control view shows what changed.
+
+- **Collections.** A folder of campaigns, such as `~/Campaigns/levels-1-3`,
+  can be a collection: a git repository in which each campaign is its own
+  repository, registered as a submodule. Run `/create-collection` in that
+  folder. New campaigns created inside it, and running copies started from
+  them, are added automatically.
+- `/save-campaign` and `/start-campaign` handle the submodules for you, so
+  you never need to run git yourself.
+- If you do run git commands yourself on submodules, such as
+  `git clone --recurse-submodules`, add `-c protocol.file.allow=always`, for
+  example `git -c protocol.file.allow=always clone --recurse-submodules ...`.
+  Git blocks copying submodules from local folders by default and reports
+  "transport 'file' not allowed". The agent adds the flag to its own
+  commands and leaves your git settings alone.
 
 ## Master and running copies
 
@@ -211,24 +235,6 @@ def srd_attribution(rules: str) -> str | None:
     return None
 
 
-def _git(folder: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    try:
-        return subprocess.run(
-            ["git", *args], cwd=folder, capture_output=True, text=True, check=False
-        )
-    except FileNotFoundError as error:
-        raise ValueError("git is not installed or not on PATH.") from error
-
-
-def _commit_all(folder: Path, message: str) -> str:
-    _git(folder, "add", "-A")
-    result = _git(folder, "commit", "-q", "-m", message)
-    if result.returncode != 0:
-        detail = (result.stderr or result.stdout).strip()
-        return f"Files were not committed: {detail}"
-    return f"Committed: {message}"
-
-
 def _campaign_md(title: str, rules: str) -> str:
     index_links = "\n".join(f"- [{label}]({name})" for name, label in INDEX_FILES.items())
     attribution = srd_attribution(rules)
@@ -281,12 +287,14 @@ def _require_campaign(folder: Path) -> CampaignMarker:
 
 
 def create_campaign(
-    folder: Path, title: str, init_git: bool = False, rules: str = DEFAULT_RULES
+    folder: Path, title: str, git: str = "none", rules: str = DEFAULT_RULES
 ) -> dict[str, object]:
     """Set up a new master campaign in an empty or new folder."""
     title = " ".join(title.split())
     if not title:
         raise ValueError("The campaign needs a title.")
+    if git not in GIT_MODES:
+        raise ValueError(f"git must be one of {', '.join(GIT_MODES)}.")
     rules = " ".join(rules.split()) or DEFAULT_RULES
     folder = folder.expanduser().resolve()
     if folder == Path(folder.anchor):
@@ -302,6 +310,12 @@ def create_campaign(
                 f"{folder} is not empty ({', '.join(existing[:5])}). Choose an empty or new "
                 "folder for a new campaign."
             )
+    collection = gitops.collection_for(folder)
+    if git == "submodule" and collection is None:
+        raise ValueError(
+            f"{folder} is not inside a collection. Create one in the parent folder with "
+            "create_collection, or use git='repo'."
+        )
 
     files = {
         CAMPAIGN_FILE: _campaign_md(title, rules),
@@ -317,13 +331,17 @@ def create_campaign(
     )
     marker_path = write_marker(folder, marker)
 
-    git_status = "Not a git repository."
-    if init_git:
-        if not (folder / ".git").exists():
-            result = _git(folder, "init", "-q")
-            if result.returncode != 0:
-                raise ValueError(f"git init failed: {result.stderr.strip()}")
-        git_status = _commit_all(folder, f"Create campaign: {title}")
+    git_status = ["Not a git repository."]
+    if git != "none":
+        gitops.init_repo(folder)
+        git_status = [gitops.commit_all(folder, f"Create campaign: {title}")]
+    if git == "submodule" and collection is not None:
+        git_status.append(gitops.add_submodule(collection, folder, f"Add campaign: {folder.name}"))
+    elif collection is not None:
+        git_status.append(
+            f"This campaign is inside the collection at {collection} but not part of it. "
+            "Use add_to_collection to add it."
+        )
 
     created = sorted([*files, marker_path.relative_to(folder).as_posix()])
     return {
@@ -373,22 +391,27 @@ def start_campaign(
     if destination.is_relative_to(master):
         raise ValueError("The running copy cannot be inside the master campaign folder.")
 
-    uses_git = (master / ".git").exists()
+    uses_git = gitops.is_repo(master)
     source_commit = None
     if uses_git:
-        status = _git(master, "status", "--porcelain")
-        if status.stdout.strip():
+        if gitops.has_changes(master) or any(
+            gitops.has_changes(master / path) for path in gitops.submodule_paths(master)
+        ):
             raise ValueError(
                 "The master has uncommitted changes. Commit them first so the running copy "
                 "includes them."
             )
-        head = _git(master, "rev-parse", "HEAD")
-        if head.returncode != 0:
+        source_commit = gitops.head(master)
+        if source_commit is None:
             raise ValueError("The master git repository has no commits yet. Commit it first.")
-        source_commit = head.stdout.strip()
-        clone = _git(master.parent, "clone", "-q", str(master), str(destination))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        clone = gitops.git(
+            destination.parent, "clone", "-q", "--recurse-submodules", str(master),
+            str(destination),
+        )
         if clone.returncode != 0:
-            raise ValueError(f"git clone failed: {clone.stderr.strip()}")
+            raise ValueError(f"git clone failed: {(clone.stderr or clone.stdout).strip()}")
+        gitops.attach_submodule_branches(destination)
     else:
         shutil.copytree(
             master,
@@ -405,9 +428,13 @@ def start_campaign(
     marker.started = date.today().isoformat()
     write_marker(destination, marker)
 
-    git_status = "Plain folder copy; the master is not a git repository."
+    git_status = ["Plain folder copy; the master is not a git repository."]
     if uses_git:
-        git_status = _commit_all(destination, f"Start running copy for {group}")
+        git_status = [gitops.commit_all(destination, f"Start running copy for {group}")]
+        collection = gitops.collection_for(destination)
+        if collection is not None and gitops.REGISTER_RUNNING_COPIES_IN_COLLECTION:
+            message = f"Add running copy: {destination.name}"
+            git_status.append(gitops.add_submodule(collection, destination, message))
     return {
         "folder": str(destination),
         "role": "running",
@@ -426,12 +453,8 @@ def snapshot_campaign(folder: Path, summary: str) -> dict[str, object]:
     if not summary:
         raise ValueError("Describe what this snapshot contains in a few words.")
 
-    if (folder / ".git").exists():
-        if not _git(folder, "status", "--porcelain").stdout.strip():
-            return {"method": "git", "result": "Nothing has changed since the last commit."}
-        result = _commit_all(folder, f"Snapshot: {summary}")
-        head = _git(folder, "rev-parse", "--short", "HEAD").stdout.strip()
-        return {"method": "git", "result": result, "commit": head}
+    if gitops.is_repo(folder):
+        return gitops.commit_snapshot(folder, f"Snapshot: {summary}")
 
     snapshots = folder / SNAPSHOTS_DIR
     snapshots.mkdir(parents=True, exist_ok=True)

@@ -23,6 +23,19 @@ to read it.
 - Never edit `.campaign/campaign.json` by hand, and never write to
   `sessions/` or `.scribe/`; they belong to the agent's tools and the Scribe.
 
+## Git and collections
+
+`campaign_status` reports how a folder uses git in its `git` field.
+
+- A **collection** is a folder of independent campaigns that is a git
+  repository, with each campaign (and each running copy made inside it) as
+  a submodule. `/create-collection` sets one up.
+- Save with `/save-campaign`, which commits every repository involved in
+  the right order. Do not run git commands for this yourself.
+- Splitting a campaign into several repositories (books of an epic, or a
+  large book in parts) is planned for a later release. If the DM asks for
+  it, say so rather than doing it by hand.
+
 ## File structure
 
 ```text

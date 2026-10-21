@@ -97,14 +97,28 @@ Check:
 - The second run refuses until the change is committed.
 - The third run refuses because it is already a running copy.
 
-### 8. Another rules edition (optional)
+### 8. Collections
+
+1. In an empty folder, run `/create-collection`.
+2. Inside it, open a new empty folder and run `/create-campaign`; choose to
+   add it to the collection. Add a chapter.
+3. Run `/save-campaign`, then `/start-campaign` for "Test Group".
+4. Edit a file in the running copy and run `/save-campaign` there.
+
+Check:
+- The collection's Source Control view lists the campaign and the running
+  copy as submodules, and nothing is left uncommitted.
+- Saving the running copy committed the running copy and the collection's
+  record of it.
+
+### 9. Another rules edition (optional)
 
 1. In a new empty folder, run `/create-campaign` and ask for D&D 5e (2014).
 
 Check: `campaign.md` records the 2014 edition with the SRD 5.1 attribution,
 and stat blocks follow that edition.
 
-### 9. Starting material (optional)
+### 10. Starting material (optional)
 
 1. In a new empty folder, run `/create-campaign` and give the agent a text
    file or a PDF with selectable text as starting notes.
