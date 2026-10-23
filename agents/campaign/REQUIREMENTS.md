@@ -93,7 +93,9 @@ the agent does not require editing every campaign.
 | `/end-session` | Ends Game Session Mode: tells the Scribe to finalize the session and leave the channel, then offers to begin Update Mode. |
 | `/update-campaign` | Works through the latest session with the DM and the Scribe and proposes changes to the remaining campaign. |
 | `/check-campaign` | Reports broken links, unlinked maps, index entries that point nowhere, and structure problems without changing anything. |
-| `/create-collection` | Makes a folder of campaigns a git repository, with each campaign as a submodule (see Collections). |
+| `/create-collection` | Makes a folder a collection of independent campaigns in its subfolders (see Campaign structures). |
+| `/create-epic` | Starts or resumes an epic: books in subfolders tied together by `epic.md` (see Epic Campaigns). |
+| `/check-epic` | Checks an epic's books against each other, then reviews the story across books, without changing anything. |
 | `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot (see Working Documents). |
 
 Command names are working names and can change during design. Because the
@@ -146,10 +148,16 @@ Each campaign can be a git repository. Git is recommended because it turns
 the master/running-copy split into history the DM can inspect, but every
 workflow also works with plain folders.
 
-- `/create-campaign` offers to initialize the master as a git repository.
-  Creation checkpoints are commits, made when the DM asks.
+- The DM normally creates the git repository before running
+  `/create-campaign`, `/create-collection`, or `/create-epic`. If the
+  folder is not in a repository, the agent explains why git helps and
+  offers to create one; without it, snapshots are zip files.
+- Creation checkpoints are commits, made by `/save-campaign`. A commit
+  covers only the folder being saved.
 - `/start-campaign` makes the running copy with `git clone` when the master
-  is a git repository, and with a plain folder copy otherwise.
+  is the top folder of its repository. When the master is a subfolder, as
+  in a collection or epic, the running copy is a sibling folder in the same
+  repository, committed there. Without git it is a plain folder copy.
 - After an update is accepted, the agent offers to commit it with a message
   that names the session, for example "Update after session 2026-10-20".
 - VS Code's Source Control view shows exactly what each update changed, and
@@ -161,33 +169,35 @@ workflow also works with plain folders.
   campaign's `.gitignore`.
 - Without git, the DM loses history and diffs but nothing else.
 
-### Collections
+### Campaign structures
 
-A collection is a folder of independent campaigns that is a git repository,
-with each campaign as its own repository registered as a submodule. A DM
-might keep one collection for level 1–3 campaigns and another for level 5–7.
-Nothing ties the campaigns in a collection together.
+One git repository, created by the DM, holds one of three structures:
 
-- When a campaign is created, the DM chooses no git, its own repository, or
-  its own repository added to the collection that contains it. Existing
-  campaigns inside the folder can be added later.
-- Starting a running copy clones the master with any submodules it has and
-  puts each on a branch, so later commits are not left detached.
-- "Uncommitted changes" checks include changes inside submodules.
-- Saving (`/save-campaign`) commits inside any submodules first, deepest
-  first, then the campaign, then the campaign's entry in its collection.
-  This works at any depth, which epic campaigns (Release 2) build on.
-- Git blocks local submodule copies by default. The agent's tools allow
-  them for their own commands; a DM running git by hand adds
-  `-c protocol.file.allow=always`. The agent does not change the DM's git
-  configuration.
+| Structure | Set up with | What the repository holds |
+|---|---|---|
+| Single campaign | `/create-campaign` in the repository's folder | One campaign |
+| Collection | `/create-collection` in the repository's folder, then `/create-campaign` in a subfolder for each campaign | Independent campaigns, such as one collection per level range |
+| Epic | `/create-epic` in the repository's folder, then `/create-campaign` in a subfolder for each book | The books of one long story, tied together (see Epic Campaigns) |
 
-Current beta defaults, to be revisited after beta testing:
+- Collections and epics are marked by `.campaign/collection.json` and
+  `.campaign/epic.json`. Their campaigns are ordinary subfolders.
+- A campaign, collection, or epic cannot be created inside a campaign
+  folder, and an epic cannot be inside a collection or another epic.
+- Saving commits only the folder being saved: one campaign or book, or a
+  whole epic when saved from the epic's folder. Other campaigns in the
+  same repository are never swept into the commit.
+- "Uncommitted changes" checks before starting a running copy look only
+  at the master's folder.
+
+Current beta default, to be revisited after beta testing:
 
 | Choice | Default | Alternatives considered |
 |---|---|---|
-| Where a running copy goes in a collection | Inside the collection, added as a submodule | Outside the collection; ask each time |
-| How submodule locations are recorded | Relative local paths, so a clone fetches submodules from the folder it was cloned from | Remote URLs such as GitHub; local now with a publish step later |
+| Where a running copy goes in a collection or epic | A sibling folder in the same repository, committed there | A separate repository outside; ask each time |
+
+An earlier design gave each campaign its own repository and joined them
+with git submodules. Beta testers liked the structures but not submodules,
+so every structure now lives in one repository.
 
 ## Operating Modes
 
@@ -436,9 +446,19 @@ An encounter file must let the DM run the fight without any other book.
   from other books, because campaigns may be published and sold (see
   Release 2). When SRD material is used, `campaign.md` carries the SRD's
   attribution statement.
+- **Encounter summary.** Each encounter starts with a summary: the party
+  it is built for, each creature's Challenge Rating, count, and XP, the
+  fight's total XP and XP per character, and its difficulty for that party
+  (Low, Moderate, or High in D&D 5e 2024). The figures come from an
+  `encounter_xp` tool so the arithmetic is right; for other editions the
+  tool gives the XP and the agent rates difficulty by that edition's rules.
+  Each difficulty variant has its own totals. XP actually awarded in play
+  is tracked by Update Mode after the session.
 - **Encounter tracker.** Each encounter ends with a table the DM can print
-  and write on: one row per individual creature, with AC, HP, damage taken,
-  conditions, and initiative. Difficulty variants add their own rows.
+  and write on: one row per individual creature, with CR, AC, HP, damage
+  taken, conditions, and initiative. Difficulty variants add their own rows.
+- `/check-campaign` warns about encounters missing their summary or
+  tracker.
 - An adventure that includes a fight either contains the stat blocks or
   the encounter's full text, so it stays self-contained.
 
@@ -658,6 +678,85 @@ the later levels.
 - Unlinked maps, such as those left behind when a section is dropped, are
   easy to find so the DM can decide whether to delete them.
 
+## Epic Campaigns
+
+An epic is a long campaign told as a series of books, like a fantasy series
+where each book is a full story but characters, places, and threads carry
+from one to the next. The epic is one git repository; each book is a
+campaign in its own subfolder.
+
+### The epic folder
+
+```text
+<epic>/
+  epic.md            the epic's story, rules edition, and Books list in reading order
+  npcs.md            NPCs who matter across books
+  items.md           items that matter across books
+  locations.md       places that matter across books
+  GETTING_STARTED.md the DM's guide to working with an epic
+  OPEN_ITEMS.md      open questions for the epic as a whole
+  WORKLOG.md         journal of work on the epic
+  .campaign/epic.json
+  01-<book>/         a book: a full campaign
+  02-<book>/
+```
+
+- `epic.md`'s **Books** section is a numbered list in reading order, each
+  item linking to a book's `campaign.md` with its level range. The agent
+  keeps it current as books are added, renamed, or reordered.
+- Books use the epic's rules edition. A book created in an epic's subfolder
+  takes it automatically.
+- **Epic-wide indexes.** An NPC, item, or location that matters in more
+  than one book has an entry in the epic's index: its role, links to the
+  books it appears in (**Books**), and what becomes of it (**Fate**, such as
+  "Book 3: dies").
+- In a book's own indexes, planned endings are recorded in **Status**, such
+  as "dies at Gallows Cross" or "destroyed in the forge".
+- Running copies of a book are made like any running copy in a repository
+  subfolder, and are not books.
+
+### Checking an epic
+
+`/check-epic` changes nothing. It runs the `check_epic` tool, then the agent
+reviews the story.
+
+- **Structural checks by the tool:**
+  - books on disk missing from the Books list, list items that do not point
+    to a book, and books listed twice;
+  - a book whose rules edition differs from the epic's;
+  - broken links in the epic's files, including links into books;
+  - an NPC who dies, an item destroyed or lost, or a place destroyed in one
+    book that is still a key entry in a later book, in reading order;
+  - entries that recur in several books' indexes but are missing from the
+    epic's index, and epic index entries that link to no book;
+  - duplicate index entries;
+  - each book's own campaign checks.
+- **Story review by the agent:** timeline and travel that do not add up,
+  characters whose motives, allegiance, or knowledge change without reason,
+  foreshadowing never paid off or payoffs with no set-up, dropped threads,
+  and level ranges with gaps or overlaps. The agent reports its findings
+  with how confident it is; the DM decides.
+
+### Splitting a book (next)
+
+A book that grows too large can be split into two books: its later
+chapters move into a new book folder, chapters are renumbered, the links
+between the moved files and the rest of the epic are rewritten, and the
+Books list and epic indexes are updated to match. Because the epic is one
+repository, this is a folder operation, not a new repository. This is the
+next step after the first epic release.
+
+### Epic open questions
+
+- **Running an epic.** A group plays Book 1, then continues into Book 2.
+  Does the running copy, and the Scribe's record, live at the epic level so
+  that Book 2 remembers what happened in Book 1? Or is each book started
+  separately, carrying the record forward?
+- How the party's state at the end of one book (levels, items, NPC
+  relationships) is handed to the next.
+- Whether a book can belong to more than one epic.
+
+
 ## Release 2 (future): Publishing and Importing Campaigns
 
 Not part of the first release. Release 2 lets campaign authors use the
@@ -812,58 +911,6 @@ campaign folder so a DM can run it with the agent.
   revised edition. How do they adopt it? For example, import it as a new
   master beside the old one and choose which changes to bring into their
   running copy.
-
-## Release 2 (future): Epic Campaigns
-
-Not part of the first release. An epic is a long campaign told as a series
-of books, like a fantasy series where each book is a full story but
-characters, places, and threads carry from one to the next. It builds on the
-same repositories-within-repositories as collections, but its parts are tied
-together.
-
-| Structure | Parent | Submodules | Tied together? |
-|---|---|---|---|
-| Collection (first release) | A folder of campaigns | Independent campaigns | No |
-| Epic | The epic | Books, in order | Yes |
-| Large book | A book of an epic | Parts of the book | Yes |
-
-### Epics: books as submodules
-
-- The epic's folder holds `epic.md`: the overarching story, the books in
-  reading order, and each book's level range.
-- Each book is a full campaign with its own `campaign.md`, chapters, and
-  indexes, registered as a submodule of the epic.
-- **Epic-wide index.** The epic has NPC, item, and location indexes across
-  all books. Each entry says which books it appears in and its status at
-  the end of each, such as "dies in Book 3".
-- **Cross-book consistency checks.**
-  - Structural checks by the tools: an indexed NPC appearing in a book
-    after the book where they die, an item held by two characters at once,
-    broken links between books, books missing from `epic.md`.
-  - Story review by the agent: timeline, character motivations, and
-    foreshadowing that is never paid off. The agent reports findings; the
-    DM decides.
-- Moving part of a book out into a new book is the same operation as
-  making part of a book its own submodule (below); the epic's index and
-  checks are updated to match.
-
-### Large books: a book in parts
-
-A book too large for one repository can be split into parts, each its own
-repository registered as a submodule of the book, such as one or more
-chapters per part. The book's `campaign.md` and indexes still describe the
-whole book, and its checks cover all its parts. Saving and starting already
-handle submodules at any depth.
-
-### Epic open questions
-
-- **Running an epic.** A group plays Book 1, then continues into Book 2.
-  Does the running copy, and the Scribe's record, live at the epic level so
-  that Book 2 remembers what happened in Book 1? Or is each book started
-  separately, carrying the record forward?
-- How the party's state at the end of one book (levels, items, NPC
-  relationships) is handed to the next.
-- Whether a book can belong to more than one epic.
 
 ## Later Releases (Release 3 or later)
 

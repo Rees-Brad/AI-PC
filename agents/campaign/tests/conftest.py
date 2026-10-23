@@ -43,7 +43,13 @@ def campaign(tmp_path: Path) -> Path:
         root / chapter / "adventures/01-smugglers-cove.md",
         "# Smugglers' Cove\n\n![Cove](../../../maps/cove.png)\n",
     )
-    write(root / chapter / "encounters/01-harbor-brawl.md", "# Harbor Brawl\n")
+    write(
+        root / chapter / "encounters/01-harbor-brawl.md",
+        (
+            "# Harbor Brawl\n\n## Encounter summary\n\n2 bandits.\n\n"
+            "## Encounter tracker\n\n| Creature | AC | HP |\n"
+        ),
+    )
     for name in ("world.png", "cove.png"):
         (root / "maps" / name).write_bytes(b"\x89PNG\r\n")
     write(

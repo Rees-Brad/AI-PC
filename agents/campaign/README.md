@@ -12,7 +12,9 @@ This version supports:
 |---|---|
 | `/create-campaign` | Starts a new master campaign in an empty folder, or resumes one. |
 | `/check-campaign` | Reports broken links, unlinked maps, index entries that point nowhere, sections missing from their outlines, and numbering problems, without changing anything. |
-| `/create-collection` | Makes a folder of campaigns a git repository, with each campaign as a submodule. |
+| `/create-collection` | Makes a folder a collection of independent campaigns, each in a subfolder. |
+| `/create-epic` | Starts or resumes an epic: one story told as books, each book a campaign in a subfolder. |
+| `/check-epic` | Checks an epic's books against each other and reviews the story across them. Changes nothing. |
 | `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot. |
 | `/start-campaign` | Makes a running copy of a master campaign for a group. |
 
@@ -92,22 +94,26 @@ directly from it. After `git pull`, start a new session to pick up changes.
 6. When the campaign is ready to play, run `/start-campaign` from the
    master.
 
-### Collections
+### Single campaigns, collections, and epics
 
-With git you can keep related campaigns together. Run `/create-collection`
-in a folder of campaigns, such as `~/Campaigns/levels-1-3`. It becomes a git
-repository, and each campaign in it stays its own independent repository,
-registered as a submodule. New campaigns created inside it and running
-copies started from them are added automatically. Make as many collections
-as you like, for example one per level range.
+Create a git repository first (for example `mkdir crown && cd crown && git
+init`), open it in VS Code, then choose a structure. If you forget the
+repository, the agent offers to create it.
 
-`/save-campaign` and `/start-campaign` handle the submodules for you. If you
-run git yourself, add `-c protocol.file.allow=always` to submodule commands
-such as `git clone --recurse-submodules`: git blocks local submodule copies
-by default, and the agent leaves your git configuration alone.
+| Structure | How to set it up | Use it for |
+|---|---|---|
+| Single campaign | Run `/create-campaign` in the repository's folder. | One campaign. |
+| Collection | Run `/create-collection` in the repository's folder, then create a subfolder for each campaign and run `/create-campaign` in it. | Independent campaigns kept together, such as one collection per level range. |
+| Epic | Run `/create-epic` in the repository's folder, then create a subfolder for each book and run `/create-campaign` in it. | One long story told as books. `epic.md` holds the story and the books in order, and epic-wide indexes track who and what carries across books. |
 
-Splitting one large campaign across repositories, as the books of an epic
-or a book in parts, is planned for Release 2.
+`/save-campaign` commits only the folder you save it from, so other
+campaigns or books in the same repository are never swept in. In a
+collection or epic, `/start-campaign` makes the running copy a sibling
+folder in the same repository.
+
+`/check-epic` checks an epic's books against each other, for example an NPC
+who dies in Book 1 but is a key NPC in Book 2, then reviews the story across
+the books for timeline, character, and foreshadowing problems.
 
 ### Working documents
 
@@ -127,10 +133,12 @@ the next time you run `/create-campaign` in them.
 
 ### Encounters
 
-Every encounter has full stat blocks for its creatures, taken from the
-open-licensed SRD for the campaign's rules edition or written new, and ends
-with a printable encounter tracker for AC, HP, damage, conditions, and
-initiative.
+Every encounter starts with a summary: each creature's Challenge Rating and
+XP, the fight's total XP and XP per character, and its difficulty for the
+party it is built for. It has full stat blocks for its creatures, taken from
+the open-licensed SRD for the campaign's rules edition or written new, and
+ends with a printable encounter tracker for CR, AC, HP, damage, conditions,
+and initiative.
 
 ### Master campaigns and running copies
 
@@ -156,7 +164,6 @@ edit it by hand.
 | The commands don't appear | Reload VS Code. Check `claude plugin list` shows `campaign-agent@ai-pc` as enabled. |
 | `campaign` server not connected | Run `claude mcp list`. Check the Python interpreter option points at the Python where you installed the package: `claude plugin configure campaign-agent@ai-pc`. |
 | `No module named ai_campaign` | The configured Python does not have the package. Repeat step 1 with that Python. |
-| `transport 'file' not allowed` from git | Add `-c protocol.file.allow=always` to submodule commands you run yourself. |
 | Committing fails inside a campaign | Set your git identity: `git config --global user.name` and `user.email`. |
 
 To uninstall:
@@ -189,6 +196,9 @@ new session. To load the plugin without installing it, start the CLI with
 | `src/ai_campaign/mcp_server.py` | MCP tools |
 | `src/ai_campaign/structure.py` | Reading and checking campaign folders |
 | `src/ai_campaign/lifecycle.py` | Creating masters, starting running copies, and snapshots |
-| `src/ai_campaign/gitops.py` | Git: repositories and collections |
+| `src/ai_campaign/gitops.py` | Git: commits scoped to one folder of a repository |
+| `src/ai_campaign/containers.py` | Collection and epic markers and membership |
+| `src/ai_campaign/epic.py` | Checks across an epic's books |
+| `src/ai_campaign/encounters.py` | Encounter XP and difficulty |
 | `src/ai_campaign/marker.py` | The `.campaign/campaign.json` marker |
 | `src/ai_campaign/pdf.py` | Text extraction from PDF starting material |

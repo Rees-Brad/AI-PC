@@ -12,11 +12,13 @@ from ai_campaign import mcp_server
 def test_server_registers_campaign_tools() -> None:
     tools = asyncio.run(mcp_server.server.list_tools())
     assert sorted(tool.name for tool in tools) == [
-        "add_to_collection",
         "campaign_status",
         "check_campaign",
+        "check_epic",
         "create_campaign",
         "create_collection",
+        "create_epic",
+        "encounter_xp",
         "ensure_campaign_docs",
         "extract_pdf_text",
         "snapshot_campaign",

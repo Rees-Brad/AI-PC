@@ -9,8 +9,9 @@ argument-hint: "[what was worked on]"
 Follow the `campaign-rules` skill throughout.
 
 1. Call the campaign MCP server's `campaign_status` tool with the absolute
-   path of the current working directory. If it is not a campaign, stop and
-   suggest `/create-campaign`. If `missing_agent_files` is not empty, call
+   path of the current working directory. It can be a campaign, a
+   collection, or an epic; if it is none of these, stop and suggest
+   `/create-campaign`. If `missing_agent_files` is not empty, call
    `ensure_campaign_docs` first.
 
 2. Update `OPEN_ITEMS.md` from this conversation:
@@ -26,8 +27,9 @@ Follow the `campaign-rules` skill throughout.
    fix them now or save as is; note any left unfixed in `OPEN_ITEMS.md`.
 
 5. Call `snapshot_campaign` with a summary of a few words, such as
-   "Chapter 2 encounters drafted". With git, it commits the campaign and
-   then the campaign's entry in its collection, if it is in one.
+   "Chapter 2 encounters drafted". In a git repository it commits only
+   this folder, so other campaigns or books in the same repository are
+   left alone; saving an epic's own folder commits the whole epic.
 
 6. Tell the DM in two or three lines what was saved, how many open items
    remain (and the top priority), and that `/create-campaign` will pick up
