@@ -10,7 +10,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from ai_campaign import gitops, lifecycle, structure
+from ai_campaign import containers, encounters, epic, gitops, lifecycle, structure
 from ai_campaign.pdf import extract_pdf_text as _extract_pdf_text
 
 server = MCPServer(
@@ -18,8 +18,9 @@ server = MCPServer(
     instructions=(
         "Tools for D&D campaign folders managed by the Campaign Agent. A master campaign "
         "is authored in Create Mode and never used to run games; a running copy is made "
-        "from it for each group. Pass absolute folder paths; relative paths are resolved "
-        "against the server's working directory."
+        "from it for each group. A collection holds independent campaigns in subfolders; an "
+        "epic holds books (campaigns) in subfolders, tied together by epic.md. Pass absolute "
+        "folder paths; relative paths are resolved against the server's working directory."
     ),
 )
 
@@ -42,14 +43,20 @@ def _path(value: str) -> Path:
 
 @server.tool()
 def campaign_status(folder: str) -> dict[str, Any]:
-    """Report whether a folder is a master campaign, a running copy, or not a campaign,
-    and summarize its chapters, adventures, encounters, maps, indexes, and sessions, plus
-    how it uses git: whether it is a repository, a collection of campaigns, or registered in
-    a collection, and any submodules it contains."""
+    """Report what a folder is: a master campaign, a running copy, a collection, an epic,
+    or none of these. For a campaign, summarize its chapters, adventures, encounters, maps,
+    indexes, and sessions, and say which collection or epic it belongs to. For a collection
+    or epic, list its campaigns or books. Also report its git repository, if any."""
     with _reported():
         path = _path(folder)
         summary = structure.campaign_summary(path)
-        summary["is_collection"] = gitops.is_collection(path)
+        container = containers.read_container(path)
+        summary["container"] = container
+        if container is not None:
+            summary["members"] = containers.members(path)
+            if container["kind"] == containers.EPIC:
+                summary.update(epic.epic_summary(path))
+        summary["belongs_to"] = containers.find_container(path)
         summary["git"] = gitops.info(path)
         return summary
 
@@ -71,34 +78,71 @@ def check_campaign(folder: str) -> dict[str, Any]:
 
 @server.tool()
 def create_campaign(
-    folder: str, title: str, git: str = "none", rules: str = lifecycle.DEFAULT_RULES
+    folder: str, title: str, rules: str | None = None, init_git: bool = False
 ) -> dict[str, Any]:
     """Set up a new master campaign in an empty or new folder: campaign.md (with the rules
     edition and its SRD attribution), the NPC, item, and location indexes, maps/ and
     chapters/ folders, GETTING_STARTED.md, OPEN_ITEMS.md, WORKLOG.md, the campaign marker,
-    and a .gitignore. The rules edition defaults to D&D 5e (2024); pass another only when
-    the DM names one. git is 'none', 'repo' (the campaign is its own git repository), or
-    'submodule' (its own repository, added to the collection whose folder contains it)."""
+    and a .gitignore. In an epic's subfolder the campaign is a book and uses the epic's
+    rules edition; otherwise the default is D&D 5e (2024). Pass rules only when the DM names
+    an edition. If the folder is in a git repository, the new files are committed; if not
+    and init_git is true, a repository is created in the folder first."""
     with _reported():
-        return lifecycle.create_campaign(_path(folder), title, git=git, rules=rules)
+        return lifecycle.create_campaign(_path(folder), title, rules=rules, init_git=init_git)
 
 
 @server.tool()
-def create_collection(folder: str, title: str) -> dict[str, Any]:
-    """Make a folder a collection of campaigns: a git repository in which each campaign is a
-    submodule. Works on a new folder or one that already holds campaigns, and lists the
-    campaigns found so they can be added with add_to_collection."""
+def create_collection(folder: str, title: str, init_git: bool = False) -> dict[str, Any]:
+    """Make a folder a collection: independent campaigns, each in its own subfolder of the
+    same git repository. Adds a README.md and the collection marker, and lists campaigns
+    already in its subfolders. With init_git, creates a git repository in the folder first
+    if it is not in one."""
     with _reported():
-        return gitops.create_collection(_path(folder), title)
+        return lifecycle.create_collection(_path(folder), title, init_git=init_git)
 
 
 @server.tool()
-def add_to_collection(campaign_folder: str) -> dict[str, Any]:
-    """Add an existing campaign or running copy that sits inside a collection's folder to
-    that collection as a submodule. A campaign that is not yet a git repository is made one
-    first; one with uncommitted changes must be saved first."""
+def create_epic(
+    folder: str, title: str, rules: str = lifecycle.DEFAULT_RULES, init_git: bool = False
+) -> dict[str, Any]:
+    """Make a folder an epic: one long story told as books, each book a campaign in its own
+    subfolder. Adds epic.md (story, rules edition, and the Books list in reading order),
+    epic-wide NPC, item, and location indexes, GETTING_STARTED.md, OPEN_ITEMS.md, WORKLOG.md,
+    and the epic marker. Books created in its subfolders use its rules edition. With
+    init_git, creates a git repository in the folder first if it is not in one."""
     with _reported():
-        return gitops.add_to_collection(_path(campaign_folder))
+        return lifecycle.create_epic(_path(folder), title, rules=rules, init_git=init_git)
+
+
+@server.tool()
+def check_epic(folder: str) -> dict[str, Any]:
+    """Check an epic's books against each other without changing anything: books missing
+    from or wrongly listed in epic.md, rules editions that differ, broken links, NPCs who
+    die (or items destroyed, places lost) in one book but are key entries in a later book,
+    entries that recur across books but are missing from the epic's indexes, and each
+    book's own campaign checks. Story review is left to the agent."""
+    with _reported():
+        issues = epic.check_epic(_path(folder))
+    return {
+        "errors": sum(issue.severity == "error" for issue in issues),
+        "warnings": sum(issue.severity == "warning" for issue in issues),
+        "issues": structure.issues_as_dicts(issues),
+    }
+
+
+@server.tool()
+def encounter_xp(
+    creatures: list[dict[str, Any]],
+    party_levels: list[int],
+    rules: str = lifecycle.DEFAULT_RULES,
+) -> dict[str, Any]:
+    """Work out an encounter's XP and difficulty. creatures is a list of
+    {"name": ..., "cr": "1/4", "count": 3}; party_levels lists each character's level,
+    such as [3, 3, 3, 3]. Returns XP per creature and in total, XP per character, and, for
+    D&D 5e (2024), the Low, Moderate, and High XP budgets and the encounter's difficulty.
+    Use it for every encounter summary instead of doing the arithmetic yourself."""
+    with _reported():
+        return encounters.encounter_xp(creatures, party_levels, rules)
 
 
 @server.tool()
@@ -111,10 +155,10 @@ def ensure_campaign_docs(folder: str) -> dict[str, Any]:
 
 @server.tool()
 def snapshot_campaign(folder: str, summary: str) -> dict[str, Any]:
-    """Save the campaign's current state so the DM can return to it. Commits all changes
-    with the message 'Snapshot: <summary>' when the campaign is a git repository, and
-    otherwise writes a zip file to .campaign/snapshots/. Update WORKLOG.md and
-    OPEN_ITEMS.md before calling this so the snapshot includes them."""
+    """Save the current state of a campaign, collection, or epic so the DM can return to
+    it. In a git repository, commits the changes inside that folder only, with the message
+    'Snapshot: <summary>'; otherwise writes a zip file to .campaign/snapshots/. Update
+    WORKLOG.md and OPEN_ITEMS.md before calling this so the snapshot includes them."""
     with _reported():
         return lifecycle.snapshot_campaign(_path(folder), summary)
 
@@ -124,9 +168,11 @@ def start_campaign(
     master_folder: str, group: str, destination: str | None = None
 ) -> dict[str, Any]:
     """Make a running copy of a master campaign for a group, with a sessions/ folder for the
-    Scribe. Uses git clone when the master is a git repository (it must have no uncommitted
-    changes) and a folder copy otherwise. By default the copy is created next to the master
-    as '<master>--<group>'. Refuses to start from a running copy."""
+    Scribe, created next to the master as '<master>--<group>' unless a destination is given.
+    A master at the root of its git repository is cloned; a master in a subfolder of a
+    repository (such as in a collection or epic) is copied to a sibling folder and committed
+    in the same repository. The master must have no uncommitted changes. Refuses to start
+    from a running copy."""
     with _reported():
         return lifecycle.start_campaign(
             _path(master_folder), group, _path(destination) if destination else None

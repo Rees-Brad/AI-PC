@@ -1,6 +1,6 @@
 ---
 name: create-collection
-description: Organize several D&D campaigns in one folder that is a git repository, with each campaign as a submodule. Use when the DM wants a library or collection of campaigns, wants to organize their campaigns folder, or wants campaigns versioned together.
+description: Organize several independent D&D campaigns in one folder and git repository, each campaign in its own subfolder. Use when the DM wants a library or collection of campaigns, such as one per level range, or wants to organize their campaigns folder.
 argument-hint: "[collection title]"
 ---
 
@@ -11,27 +11,25 @@ argument-hint: "[collection title]"
    on it.
    - If it is a campaign, stop: a collection is the folder that holds
      campaigns, usually the campaign's parent folder.
-   - If `is_collection` is already true, say so and offer to add campaigns
-     to it instead (step 4).
+   - If it is already a collection or epic (`container` is set), say so
+     and offer to create a campaign in a new subfolder instead.
 
-2. Explain briefly what a collection is: the folder becomes a git
-   repository, and each campaign inside it stays its own repository,
-   registered as a submodule. New campaigns created inside it and running
-   copies started from them are added automatically. Everything stays on
-   this computer.
+2. Explain briefly: a collection holds independent campaigns, each in its
+   own subfolder of the same git repository. Nothing ties the campaigns
+   together; for one long story told across books, `/create-epic` is the
+   better fit.
 
-3. Ask for the collection's title, unless given: $ARGUMENTS. Then call
-   `create_collection` with the absolute folder path and the title.
+3. If `git.repository` is empty, the folder is not in a git repository.
+   The DM normally creates it first; offer to create it now
+   (`init_git=true`). If the DM declines, continue without git.
 
-4. If `campaigns_found` is not empty, list them and ask which to add. For
-   each one the DM picks, call `add_to_collection` with its absolute path.
-   A campaign that is not yet a git repository is made one; a campaign with
-   unsaved changes must be saved first with `/save-campaign` from its
-   folder.
+4. Ask for the collection's title, unless given: $ARGUMENTS. Then call
+   `create_collection` with the absolute folder path, the title, and
+   `init_git` if the DM agreed.
 
-5. Tell the DM how to continue: open a new folder inside the collection and
-   run `/create-campaign` to add a campaign. Mention that running git
-   commands by hand on a collection needs
-   `-c protocol.file.allow=always` for submodule operations such as
-   `git clone --recurse-submodules`, because git blocks local submodule
-   copies by default.
+5. If `campaigns_found` is not empty, list them: they are already part of
+   the collection.
+
+6. Tell the DM how to add a campaign: create a subfolder, open it in VS
+   Code, and run `/create-campaign`. Offer to create the subfolder and run
+   `code <subfolder>` for them.

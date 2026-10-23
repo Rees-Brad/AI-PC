@@ -8,7 +8,7 @@ import zipfile
 from datetime import date, datetime
 from pathlib import Path
 
-from ai_campaign import gitops
+from ai_campaign import containers, gitops
 from ai_campaign.marker import CampaignMarker, read_marker, write_marker
 from ai_campaign.structure import (
     CAMPAIGN_FILE,
@@ -23,9 +23,6 @@ from ai_campaign.structure import (
 )
 
 DEFAULT_RULES = "D&D 5e (2024)"
-# How a new campaign uses git: not at all, as its own repository, or as its own
-# repository registered in the collection that contains it.
-GIT_MODES = ("none", "repo", "submodule")
 SNAPSHOTS_DIR = Path(".campaign") / "snapshots"
 
 # Files a new, otherwise empty campaign folder may already contain.
@@ -53,7 +50,7 @@ GITIGNORE = """\
 # committed is still an open question, so it is excluded for now.
 .scribe/
 
-# Zip snapshots, used only when the campaign is not a git repository.
+# Zip snapshots, used only when the campaign is not in a git repository.
 .campaign/snapshots/
 """
 
@@ -95,8 +92,8 @@ approval before it is written.
   open items, checks the campaign, and takes a snapshot.
 - `/start-campaign`: when the campaign is ready to play, make a running
   copy for a group.
-- `/create-collection`: organize a folder of campaigns as one git
-  repository (see Git and collections).
+- `/create-collection` and `/create-epic`: organize several campaigns in
+  one folder (see Git, collections, and epics).
 
 Claude Code may show these with a prefix, such as
 `/campaign-agent:create-campaign`.
@@ -134,7 +131,7 @@ chapters/
   01-<chapter>/
     chapter.md     the chapter outline
     adventures/    one file per adventure
-    encounters/    one file per encounter, with stat blocks and a tracker
+    encounters/    one file per encounter: CR, XP, stat blocks, and a tracker
 ```
 
 Every section is its own file, numbered in story order.
@@ -155,24 +152,24 @@ or WebP. Ask the agent to add a map to a section, and to answer questions
 about it. Saving an edited map under the same name keeps every link to it
 working.
 
-## Git and collections
+## Git, collections, and epics
 
-If the campaign uses git, every snapshot is a commit you can return to, and
-VS Code's Source Control view shows what changed.
+If the campaign is in a git repository, every snapshot is a commit you can
+return to, and VS Code's Source Control view shows what changed. Create the
+repository first (for example with `git init`), or let the agent do it.
 
-- **Collections.** A folder of campaigns, such as `~/Campaigns/levels-1-3`,
-  can be a collection: a git repository in which each campaign is its own
-  repository, registered as a submodule. Run `/create-collection` in that
-  folder. New campaigns created inside it, and running copies started from
-  them, are added automatically.
-- `/save-campaign` and `/start-campaign` handle the submodules for you, so
-  you never need to run git yourself.
-- If you do run git commands yourself on submodules, such as
-  `git clone --recurse-submodules`, add `-c protocol.file.allow=always`, for
-  example `git -c protocol.file.allow=always clone --recurse-submodules ...`.
-  Git blocks copying submodules from local folders by default and reports
-  "transport 'file' not allowed". The agent adds the flag to its own
-  commands and leaves your git settings alone.
+- **Single campaign.** The repository holds this one campaign.
+- **Collection.** The repository holds several independent campaigns, each
+  in its own subfolder, such as one collection per level range. Run
+  `/create-collection` in the repository's folder, then `/create-campaign`
+  in a subfolder for each campaign.
+- **Epic.** The repository holds the books of one long story, each book a
+  campaign in its own subfolder, tied together by `epic.md` and epic-wide
+  indexes. Run `/create-epic` in the repository's folder, then
+  `/create-campaign` in a subfolder for each book. `/check-epic` checks the
+  books against each other.
+- `/save-campaign` commits only this campaign's folder, so other campaigns
+  in the same repository are never swept in.
 
 ## Master and running copies
 
@@ -180,7 +177,9 @@ This folder is the **master** campaign: the campaign as written. Games are
 not run from it, because game sessions and the updates after them change
 the files. When the campaign is ready to play, `/start-campaign` makes a
 **running copy** for one group next to this folder, and you open that copy
-to run the group's games. The master can start any number of groups.
+to run the group's games. In a collection or epic, the running copy is a
+subfolder of the same repository. The master can start any number of
+groups.
 """
 
 OPEN_ITEMS = f"""\
@@ -218,6 +217,93 @@ entries come first.
 """
 
 
+COLLECTION_README = """\
+# {title}
+
+A collection of independent campaigns, each in its own subfolder of this git
+repository.
+
+- To add a campaign, create a subfolder, open it in VS Code, and run
+  `/create-campaign`.
+- Running copies started from a campaign here are subfolders too, named
+  `<campaign>--<group>`.
+- `/save-campaign` in a campaign's folder commits only that campaign.
+"""
+
+EPIC_INDEX_DESCRIPTIONS = {
+    "npcs.md": "NPCs who matter across the epic: anyone who appears in more than one "
+    "book, or whose fate shapes a later book.",
+    "items.md": "Magic items and artifacts that matter across the epic.",
+    "locations.md": "Places that matter across the epic.",
+}
+
+EPIC_INDEX_EXAMPLE = """\
+<!--
+Add one entry per {kind} that matters across books. Details stay in the books.
+
+## Name
+- **Role:** Their part in the epic.
+- **Books:** [Book 1](book-folder/campaign.md), [Book 3](other-book/campaign.md)
+- **Fate:** What becomes of them, by book, such as "Book 3: dies".
+-->
+"""
+
+EPIC_GETTING_STARTED = """\
+# Getting started with {title}
+
+This folder is an **epic**: one long story told as a series of books. Each
+book is a full campaign in its own subfolder. The Campaign Agent keeps the
+books consistent with each other and with the epic's story.
+
+## Commands
+
+- `/create-epic`: resume work on the epic as a whole: its story, the book
+  order, and the epic-wide indexes.
+- `/create-campaign`: run it in a book's subfolder to create or resume that
+  book.
+- `/check-epic`: check the books against each other, then review the story
+  for timeline, character, and foreshadowing problems. It changes nothing.
+- `/save-campaign`: save your progress, here for the epic or in a book's
+  folder for that book.
+
+Claude Code may show these with a prefix, such as
+`/campaign-agent:create-epic`.
+
+## Your epic folder
+
+```text
+epic.md            the epic's story, rules edition, and books in reading order
+npcs.md            NPCs who matter across books
+items.md           items that matter across books
+locations.md       places that matter across books
+OPEN_ITEMS.md      open questions for the epic as a whole
+WORKLOG.md         journal of work on the epic
+<book-folder>/     one folder per book, each a full campaign
+```
+
+## Adding a book
+
+1. Create a subfolder for the book, such as `02-the-shadow-rising`, and open
+   it in VS Code.
+2. Run `/create-campaign`. The book uses the epic's rules edition.
+3. Add the book to the Books list in `epic.md`, in reading order. The agent
+   offers to do this for you.
+
+## Keeping the books consistent
+
+- When an NPC, item, or place matters in more than one book, it belongs in
+  the epic's indexes, with the books it appears in and its fate.
+- In each book's own indexes, record planned fates in the **Status** field,
+  such as "dies in Chapter 3". `/check-epic` uses these to catch, for
+  example, an NPC who dies in Book 1 but is a key NPC in Book 2.
+
+## Git
+
+The epic is one git repository. `/save-campaign` in a book's folder commits
+only that book; in this folder it commits the whole epic.
+"""
+
+
 def slugify(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     if not slug:
@@ -235,19 +321,22 @@ def srd_attribution(rules: str) -> str | None:
     return None
 
 
-def _campaign_md(title: str, rules: str) -> str:
-    index_links = "\n".join(f"- [{label}]({name})" for name, label in INDEX_FILES.items())
+def _rules_text(rules: str) -> str:
     attribution = srd_attribution(rules)
     if attribution:
-        rules_text = (
+        return (
             f"{rules}. Stat blocks come from the open-licensed System Reference Document "
             f"for this edition, or are original.\n\n{attribution}"
         )
-    else:
-        rules_text = (
-            f"{rules}. Check the license of any game-system material reproduced in this "
-            "campaign before sharing or selling it."
-        )
+    return (
+        f"{rules}. Check the license of any game-system material reproduced in this "
+        "campaign before sharing or selling it."
+    )
+
+
+def _campaign_md(title: str, rules: str) -> str:
+    index_links = "\n".join(f"- [{label}]({name})" for name, label in INDEX_FILES.items())
+    rules_text = _rules_text(rules)
     return (
         f"# {title}\n\n"
         f"## Goal\n\n{PLACEHOLDER}\n\n"
@@ -286,36 +375,53 @@ def _require_campaign(folder: Path) -> CampaignMarker:
     return marker
 
 
+def _check_new_folder(folder: Path, kind: str) -> Path:
+    folder = folder.expanduser().resolve()
+    if folder == Path(folder.anchor):
+        raise ValueError(f"A {kind} cannot be created at the filesystem root.")
+    if folder.exists() and not folder.is_dir():
+        raise ValueError(f"{folder} exists and is not a folder.")
+    if read_marker(folder) is not None:
+        raise ValueError(f"{folder} is already a campaign. Use campaign_status to resume it.")
+    if containers.read_container(folder) is not None:
+        raise ValueError(f"{folder} is already a collection or epic.")
+    enclosing = containers.find_enclosing_campaign(folder)
+    if enclosing is not None:
+        raise ValueError(f"{folder} is inside the campaign at {enclosing}. Choose another folder.")
+    return folder
+
+
+def _git_setup(folder: Path, init_git: bool, message: str) -> list[str]:
+    """Commit a new folder in its repository, creating one first if asked."""
+    if gitops.repo_root(folder) is None:
+        if not init_git:
+            return ["Not in a git repository. Snapshots will be zip files."]
+        gitops.init_repo(folder)
+    return [gitops.commit_folder(folder, message)]
+
+
 def create_campaign(
-    folder: Path, title: str, git: str = "none", rules: str = DEFAULT_RULES
+    folder: Path, title: str, rules: str | None = None, init_git: bool = False
 ) -> dict[str, object]:
-    """Set up a new master campaign in an empty or new folder."""
+    """Set up a new master campaign in an empty or new folder.
+
+    Inside an epic, the campaign is a book and defaults to the epic's rules edition.
+    """
     title = " ".join(title.split())
     if not title:
         raise ValueError("The campaign needs a title.")
-    if git not in GIT_MODES:
-        raise ValueError(f"git must be one of {', '.join(GIT_MODES)}.")
-    rules = " ".join(rules.split()) or DEFAULT_RULES
-    folder = folder.expanduser().resolve()
-    if folder == Path(folder.anchor):
-        raise ValueError("A campaign cannot be created at the filesystem root.")
+    folder = _check_new_folder(folder, "campaign")
     if folder.exists():
-        if not folder.is_dir():
-            raise ValueError(f"{folder} exists and is not a folder.")
-        if read_marker(folder) is not None:
-            raise ValueError(f"{folder} is already a campaign. Use campaign_status to resume it.")
         existing = sorted(p.name for p in folder.iterdir() if p.name not in ALLOWED_IN_NEW_FOLDER)
         if existing:
             raise ValueError(
                 f"{folder} is not empty ({', '.join(existing[:5])}). Choose an empty or new "
                 "folder for a new campaign."
             )
-    collection = gitops.collection_for(folder)
-    if git == "submodule" and collection is None:
-        raise ValueError(
-            f"{folder} is not inside a collection. Create one in the parent folder with "
-            "create_collection, or use git='repo'."
-        )
+    container = containers.find_container(folder)
+    if rules is None or not rules.strip():
+        rules = (container or {}).get("rules") or DEFAULT_RULES
+    rules = " ".join(rules.split())
 
     files = {
         CAMPAIGN_FILE: _campaign_md(title, rules),
@@ -330,26 +436,116 @@ def create_campaign(
         role="master", title=title, created=date.today().isoformat(), rules=rules
     )
     marker_path = write_marker(folder, marker)
+    git_status = _git_setup(folder, init_git, f"Create campaign: {title}")
 
-    git_status = ["Not a git repository."]
-    if git != "none":
-        gitops.init_repo(folder)
-        git_status = [gitops.commit_all(folder, f"Create campaign: {title}")]
-    if git == "submodule" and collection is not None:
-        git_status.append(gitops.add_submodule(collection, folder, f"Add campaign: {folder.name}"))
-    elif collection is not None:
-        git_status.append(
-            f"This campaign is inside the collection at {collection} but not part of it. "
-            "Use add_to_collection to add it."
-        )
-
-    created = sorted([*files, marker_path.relative_to(folder).as_posix()])
-    return {
+    result: dict[str, object] = {
         "folder": str(folder),
         "role": "master",
         "rules": rules,
-        "created": created,
+        "created": sorted([*files, marker_path.relative_to(folder).as_posix()]),
         "git": git_status,
+    }
+    if container is not None:
+        result["container"] = {k: container[k] for k in ("kind", "title", "folder")}
+        if container["kind"] == containers.EPIC:
+            result["next_step"] = "Add this book to the Books list in the epic's epic.md."
+    return result
+
+
+def create_collection(folder: Path, title: str, init_git: bool = False) -> dict[str, object]:
+    """Make a folder a collection: independent campaigns in its subfolders."""
+    title = " ".join(title.split())
+    if not title:
+        raise ValueError("The collection needs a title.")
+    folder = _check_new_folder(folder, "collection")
+    folder.mkdir(parents=True, exist_ok=True)
+    created = []
+    if not (folder / "README.md").exists():
+        (folder / "README.md").write_text(COLLECTION_README.format(title=title), encoding="utf-8")
+        created.append("README.md")
+    if not (folder / ".gitignore").exists():
+        (folder / ".gitignore").write_text(GITIGNORE, encoding="utf-8")
+        created.append(".gitignore")
+    marker = containers.write_container(
+        folder, containers.COLLECTION, {"title": title, "created": date.today().isoformat()}
+    )
+    created.append(marker.relative_to(folder).as_posix())
+    return {
+        "folder": str(folder),
+        "created": sorted(created),
+        "git": _git_setup(folder, init_git, f"Create collection: {title}"),
+        "campaigns_found": containers.members(folder),
+    }
+
+
+def _epic_md(title: str, rules: str) -> str:
+    index_links = "\n".join(f"- [{label}]({name})" for name, label in INDEX_FILES.items())
+    return (
+        f"# {title}\n\n"
+        f"## Story\n\n{PLACEHOLDER}\n\n"
+        f"## Rules\n\n{_rules_text(rules)}\n\n"
+        "## Books\n\n"
+        "<!--\n"
+        "List the books in reading order, each linking to its campaign.md, with its "
+        "level range:\n"
+        "1. [Book 1: Title](book-folder/campaign.md) - levels 1-4\n"
+        "-->\n\n"
+        f"## Indexes\n\n{index_links}\n"
+    )
+
+
+def _epic_index_md(name: str) -> str:
+    label = INDEX_FILES[name]
+    kind = label.removeprefix("Key ").rstrip("s")
+    return (
+        f"# {label} across the epic\n\n{EPIC_INDEX_DESCRIPTIONS[name]}\n\n"
+        + EPIC_INDEX_EXAMPLE.format(kind=kind)
+    )
+
+
+def create_epic(
+    folder: Path, title: str, rules: str = DEFAULT_RULES, init_git: bool = False
+) -> dict[str, object]:
+    """Make a folder an epic: books in its subfolders, tied together by epic.md."""
+    title = " ".join(title.split())
+    if not title:
+        raise ValueError("The epic needs a title.")
+    rules = " ".join(rules.split()) or DEFAULT_RULES
+    folder = _check_new_folder(folder, "epic")
+    if containers.find_container(folder) is not None:
+        raise ValueError(f"{folder} is inside a collection or epic. Choose another folder.")
+    files = {
+        "epic.md": _epic_md(title, rules),
+        **{name: _epic_index_md(name) for name in INDEX_FILES},
+        GETTING_STARTED_FILE: EPIC_GETTING_STARTED.format(title=title),
+        OPEN_ITEMS_FILE: OPEN_ITEMS.replace(
+            "- [ ] Decide the campaign's goal. ([campaign.md](campaign.md))\n"
+            "- [ ] Write the overview and central story arc. ([campaign.md](campaign.md))\n"
+            "- [ ] Outline the chapters.",
+            "- [ ] Write the epic's story. ([epic.md](epic.md))\n"
+            "- [ ] Decide the books and their order. ([epic.md](epic.md))",
+        ).replace("## Chapters\n", "## Books\n"),
+        WORKLOG_FILE: WORKLOG.format(today=date.today().isoformat()).replace(
+            "Created the campaign.", "Created the epic."
+        ),
+    }
+    if not (folder / ".gitignore").exists():
+        files[".gitignore"] = GITIGNORE
+    existing = [name for name in files if (folder / name).exists()]
+    if existing:
+        raise ValueError(f"{folder} already has {', '.join(existing)}. Choose a new folder.")
+    _write_files(folder, files)
+    marker = containers.write_container(
+        folder,
+        containers.EPIC,
+        {"title": title, "created": date.today().isoformat(), "rules": rules},
+    )
+    return {
+        "folder": str(folder),
+        "rules": rules,
+        "created": sorted([*files, marker.relative_to(folder).as_posix()]),
+        "git": _git_setup(folder, init_git, f"Create epic: {title}"),
+        "books_found": containers.members(folder),
     }
 
 
@@ -369,7 +565,12 @@ def ensure_campaign_docs(folder: Path) -> dict[str, object]:
 def start_campaign(
     master: Path, group: str, destination: Path | None = None
 ) -> dict[str, object]:
-    """Make a running copy of a master campaign for a group."""
+    """Make a running copy of a master campaign for a group.
+
+    A master at the root of its repository is cloned. A master in a subfolder of a
+    repository, such as in a collection or epic, is copied to a sibling folder in
+    the same repository and committed there.
+    """
     master = master.expanduser().resolve()
     marker = _require_campaign(master)
     if marker.role != "master":
@@ -391,28 +592,26 @@ def start_campaign(
     if destination.is_relative_to(master):
         raise ValueError("The running copy cannot be inside the master campaign folder.")
 
-    uses_git = gitops.is_repo(master)
+    root = gitops.repo_root(master)
     source_commit = None
-    if uses_git:
-        if gitops.has_changes(master) or any(
-            gitops.has_changes(master / path) for path in gitops.submodule_paths(master)
-        ):
+    if root is not None:
+        if gitops.has_changes(master):
             raise ValueError(
-                "The master has uncommitted changes. Commit them first so the running copy "
+                "The master has uncommitted changes. Save them first so the running copy "
                 "includes them."
             )
         source_commit = gitops.head(master)
         if source_commit is None:
-            raise ValueError("The master git repository has no commits yet. Commit it first.")
+            raise ValueError("The master's git repository has no commits yet. Save it first.")
+
+    if root == master:
+        method = "git clone"
         destination.parent.mkdir(parents=True, exist_ok=True)
-        clone = gitops.git(
-            destination.parent, "clone", "-q", "--recurse-submodules", str(master),
-            str(destination),
-        )
+        clone = gitops.git(destination.parent, "clone", "-q", str(master), str(destination))
         if clone.returncode != 0:
             raise ValueError(f"git clone failed: {(clone.stderr or clone.stdout).strip()}")
-        gitops.attach_submodule_branches(destination)
     else:
+        method = "folder copy"
         shutil.copytree(
             master,
             destination,
@@ -428,33 +627,35 @@ def start_campaign(
     marker.started = date.today().isoformat()
     write_marker(destination, marker)
 
-    git_status = ["Plain folder copy; the master is not a git repository."]
-    if uses_git:
-        git_status = [gitops.commit_all(destination, f"Start running copy for {group}")]
-        collection = gitops.collection_for(destination)
-        if collection is not None and gitops.REGISTER_RUNNING_COPIES_IN_COLLECTION:
-            message = f"Add running copy: {destination.name}"
-            git_status.append(gitops.add_submodule(collection, destination, message))
+    if gitops.repo_root(destination) is not None:
+        git_status = gitops.commit_folder(destination, f"Start running copy for {group}")
+        if method == "folder copy":
+            method = "folder copy in the same repository"
+    else:
+        git_status = "Not in a git repository."
     return {
         "folder": str(destination),
         "role": "running",
         "master": str(master),
         "group": group,
-        "method": "git clone" if uses_git else "folder copy",
+        "method": method,
         "git": git_status,
     }
 
 
 def snapshot_campaign(folder: Path, summary: str) -> dict[str, object]:
-    """Save the campaign's current state: a git commit, or a zip file without git."""
+    """Save the current state of a campaign, collection, or epic: a commit of just that
+    folder in its git repository, or a zip file when it is not in one."""
     folder = folder.expanduser().resolve()
-    _require_campaign(folder)
+    if read_marker(folder) is None and containers.read_container(folder) is None:
+        raise ValueError(f"{folder} is not a campaign, collection, or epic.")
     summary = " ".join(summary.split())
     if not summary:
         raise ValueError("Describe what this snapshot contains in a few words.")
 
-    if gitops.is_repo(folder):
-        return gitops.commit_snapshot(folder, f"Snapshot: {summary}")
+    if gitops.repo_root(folder) is not None:
+        result = gitops.commit_folder(folder, f"Snapshot: {summary}")
+        return {"method": "git", "result": result, "commit": gitops.head(folder)}
 
     snapshots = folder / SNAPSHOTS_DIR
     snapshots.mkdir(parents=True, exist_ok=True)

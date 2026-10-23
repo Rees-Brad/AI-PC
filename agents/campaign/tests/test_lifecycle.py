@@ -50,7 +50,7 @@ def test_create_campaign_scaffolds_a_master(tmp_path: Path) -> None:
     assert marker.rules == "D&D 5e (2024)"
     assert "SRD 5.2" in (root / "campaign.md").read_text()
     assert "# Getting started with The Sunken Crown" in (root / "GETTING_STARTED.md").read_text()
-    assert result["git"] == ["Not a git repository."]
+    assert result["git"] == ["Not in a git repository. Snapshots will be zip files."]
 
 
 def test_create_campaign_allows_folder_with_editor_settings(tmp_path: Path) -> None:
@@ -75,7 +75,7 @@ def test_create_campaign_requires_title(tmp_path: Path) -> None:
 
 
 def test_create_campaign_with_git_commits(tmp_path: Path) -> None:
-    result = create_campaign(tmp_path / "crown", "Crown", git="repo")
+    result = create_campaign(tmp_path / "crown", "Crown", init_git=True)
     assert result["git"] == ["Committed: Create campaign: Crown"]
     assert git(tmp_path / "crown", "status", "--porcelain") == ""
 
@@ -100,12 +100,12 @@ def test_start_campaign_copies_plain_folder(campaign: Path) -> None:
 
 def test_start_campaign_clones_git_master(tmp_path: Path) -> None:
     master = tmp_path / "crown"
-    create_campaign(master, "Crown", git="repo")
+    create_campaign(master, "Crown", init_git=True)
     head = git(master, "rev-parse", "HEAD")
     result = start_campaign(master, "Friday", tmp_path / "games" / "friday")
     copy = tmp_path / "games" / "friday"
     assert result["method"] == "git clone"
-    assert result["git"] == ["Committed: Start running copy for Friday"]
+    assert result["git"] == "Committed: Start running copy for Friday"
     assert git(copy, "status", "--porcelain") == ""
     assert git(copy, "remote", "get-url", "origin") == str(master)
     marker = read_marker(copy)
@@ -114,7 +114,7 @@ def test_start_campaign_clones_git_master(tmp_path: Path) -> None:
 
 def test_start_campaign_refuses_dirty_git_master(tmp_path: Path) -> None:
     master = tmp_path / "crown"
-    create_campaign(master, "Crown", git="repo")
+    create_campaign(master, "Crown", init_git=True)
     (master / "campaign.md").write_text("# Changed\n")
     with pytest.raises(ValueError, match="uncommitted changes"):
         start_campaign(master, "Friday")
@@ -170,7 +170,7 @@ def test_ensure_campaign_docs_adds_only_missing_files(campaign: Path) -> None:
 
 def test_snapshot_commits_in_git(tmp_path: Path) -> None:
     root = tmp_path / "crown"
-    create_campaign(root, "Crown", git="repo")
+    create_campaign(root, "Crown", init_git=True)
     assert snapshot_campaign(root, "Nothing")["result"] == (
         "Nothing has changed since the last commit."
     )
@@ -193,5 +193,5 @@ def test_snapshot_zips_without_git(campaign: Path) -> None:
 def test_snapshot_requires_campaign_and_summary(campaign: Path, tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Describe"):
         snapshot_campaign(campaign, "  ")
-    with pytest.raises(ValueError, match="no campaign marker"):
+    with pytest.raises(ValueError, match="not a campaign, collection, or epic"):
         snapshot_campaign(tmp_path, "x")

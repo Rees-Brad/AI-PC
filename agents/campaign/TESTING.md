@@ -34,6 +34,8 @@ Check:
 1. Open one of the encounter files.
 
 Check:
+- The encounter starts with a summary: each creature's CR and XP, the
+  total XP and XP per character, and a difficulty for the party.
 - Every creature has a full stat block, not just a name like "thug".
 - Named NPCs who fight have their own stat block.
 - The file ends with an encounter tracker table with a row per creature,
@@ -97,19 +99,27 @@ Check:
 - The second run refuses until the change is committed.
 - The third run refuses because it is already a running copy.
 
-### 8. Collections
+### 8. Collections and epics
 
-1. In an empty folder, run `/create-collection`.
-2. Inside it, open a new empty folder and run `/create-campaign`; choose to
-   add it to the collection. Add a chapter.
-3. Run `/save-campaign`, then `/start-campaign` for "Test Group".
-4. Edit a file in the running copy and run `/save-campaign` there.
+1. Create a folder, run `git init` in it, open it in VS Code, and run
+   `/create-collection`. Create two subfolders and run `/create-campaign`
+   in each.
+2. Change a file in each campaign, then run `/save-campaign` in just one.
+3. Run `/start-campaign` for "Test Group" in that campaign.
+4. In a new folder (with `git init`), run `/create-epic`. Create two book
+   subfolders, run `/create-campaign` in each, and let the agent add them
+   to `epic.md`.
+5. In Book 1's `npcs.md`, give an NPC the status "dies"; add the same NPC
+   to Book 2's `npcs.md`. Run `/check-epic`.
 
 Check:
-- The collection's Source Control view lists the campaign and the running
-  copy as submodules, and nothing is left uncommitted.
-- Saving the running copy committed the running copy and the collection's
-  record of it.
+- Saving one campaign committed only that campaign; the other's change is
+  still uncommitted.
+- The running copy is a sibling folder in the same repository, committed
+  there.
+- Books took the epic's rules edition without asking.
+- `/check-epic` reports the NPC who dies in Book 1 but appears in Book 2,
+  and the agent adds its own story review.
 
 ### 9. Another rules edition (optional)
 

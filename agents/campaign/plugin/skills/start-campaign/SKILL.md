@@ -23,9 +23,10 @@ argument-hint: "[group name]"
 
 5. Tell the DM where the copy will be created. The default is next to the
    master, named `<master>--<group>`. Ask whether that is fine or whether
-   they want another location. If the master is in a collection
-   (`git.registered_in` is set), say that a copy created inside the
-   collection's folder is added to the collection too.
+   they want another location. If the master is in a collection or epic
+   (`belongs_to` is set), the copy is a sibling folder in the same
+   repository and is committed there. For an epic, say that running a
+   whole epic across books is still being designed; this starts one book.
 
 6. Call `start_campaign` with the master folder, the group name, and the
    destination if the DM chose one.

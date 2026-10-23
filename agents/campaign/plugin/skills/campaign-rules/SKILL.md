@@ -23,18 +23,34 @@ to read it.
 - Never edit `.campaign/campaign.json` by hand, and never write to
   `sessions/` or `.scribe/`; they belong to the agent's tools and the Scribe.
 
-## Git and collections
+## Git, collections, and epics
 
-`campaign_status` reports how a folder uses git in its `git` field.
+`campaign_status` reports what a folder is (`container`), what it belongs to
+(`belongs_to`), and its git repository (`git`). One git repository, created
+by the DM, holds everything:
 
-- A **collection** is a folder of independent campaigns that is a git
-  repository, with each campaign (and each running copy made inside it) as
-  a submodule. `/create-collection` sets one up.
-- Save with `/save-campaign`, which commits every repository involved in
-  the right order. Do not run git commands for this yourself.
-- Splitting a campaign into several repositories (books of an epic, or a
-  large book in parts) is planned for a later release. If the DM asks for
-  it, say so rather than doing it by hand.
+- a **single campaign**;
+- a **collection** of independent campaigns, each in a subfolder;
+- an **epic**: books in subfolders, tied together by the epic's `epic.md`
+  (story, rules edition, and the Books list in reading order) and its
+  epic-wide indexes.
+
+Save with `/save-campaign`, which commits only the folder being saved. Do
+not run git commands for this yourself.
+
+### Books of an epic
+
+- A book is a full campaign and follows every rule here. It uses the
+  epic's rules edition.
+- Keep the epic's Books list in `epic.md` in reading order, with each
+  book's level range, whenever books are added, renamed, or reordered.
+- When an NPC, item, or location matters in more than one book, give it an
+  entry in the epic's index: its role, links to the books it appears in
+  (**Books**), and what becomes of it (**Fate**, such as "Book 3: dies").
+- In a book's own indexes, record planned endings in **Status**, such as
+  "dies at Gallows Cross" or "destroyed in the forge". `/check-epic` uses
+  these to find, for example, an NPC who dies in one book but is a key NPC
+  in a later one.
 
 ## File structure
 
@@ -103,6 +119,34 @@ it has a full stat block, never just a name like "thug" or "scout".
   includes the encounter's full text, so the DM never needs another file at
   the table.
 
+## Encounter summary
+
+Start every encounter file with an `## Encounter summary` section, written
+from the campaign MCP server's `encounter_xp` tool rather than your own
+arithmetic:
+
+- the party it is built for (number of characters and their levels);
+- each creature with its Challenge Rating (CR), how many appear, and its XP;
+- the fight's total XP and the XP each character earns;
+- its difficulty for that party: Low, Moderate, or High for D&D 5e (2024).
+  For other editions, rate it with that edition's rules and say so.
+
+```markdown
+## Encounter summary
+
+Built for 4 characters of level 2.
+
+| Creature | CR | Count | XP each | XP |
+|---|---|---|---|---|
+| Bandit | 1/8 | 4 | 25 | 100 |
+| Gant (thug) | 1 | 1 | 200 | 200 |
+
+**Total XP:** 300 (75 per character) · **Difficulty:** Low
+```
+
+Give each difficulty variant its own total and difficulty line. The XP
+awarded in play is tracked after the session, not here.
+
 ## Encounter tracker
 
 End every encounter file with an `## Encounter tracker` table the DM can
@@ -111,11 +155,11 @@ print and write on, with one row per individual creature:
 ```markdown
 ## Encounter tracker
 
-| Creature | AC | HP | Damage taken | Conditions | Initiative |
-|---|---|---|---|---|---|
-| Bandit 1 | 12 | 11 | | | |
-| Bandit 2 | 12 | 11 | | | |
-| Gant (thug) | 11 | 32 | | | |
+| Creature | CR | AC | HP | Damage taken | Conditions | Initiative |
+|---|---|---|---|---|---|---|
+| Bandit 1 | 1/8 | 12 | 11 | | | |
+| Bandit 2 | 1/8 | 12 | 11 | | | |
+| Gant (thug) | 1 | 11 | 32 | | | |
 ```
 
 Update the tracker whenever the creatures in the encounter change,

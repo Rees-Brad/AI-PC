@@ -35,6 +35,9 @@ _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _INLINE_CODE = re.compile(r"`[^`]*`")
 _EXTERNAL = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
 _CHECKBOX = re.compile(r"^\s*[-*+]\s+\[([ xX])\]\s")
+_FIELD = re.compile(r"^\s*[-*+]\s+\*\*([^*:]+):?\*\*:?\s*(.*)$")
+ENCOUNTER_SUMMARY = "Encounter summary"
+ENCOUNTER_TRACKER = "Encounter tracker"
 
 
 @dataclass
@@ -156,6 +159,27 @@ def index_entries(path: Path) -> list[tuple[str, int, list[Link]]]:
     return entries
 
 
+def index_fields(path: Path) -> list[tuple[str, int, dict[str, str]]]:
+    """Each `## ` entry in an index file with its `- **Field:** value` lines."""
+    entries: list[tuple[str, int, dict[str, str]]] = []
+    for number, line in visible_lines(path.read_text(encoding="utf-8", errors="replace")):
+        if line.startswith("## "):
+            entries.append((line[3:].strip(), number, {}))
+        elif entries:
+            match = _FIELD.match(line)
+            if match:
+                entries[-1][2][match.group(1).strip().lower()] = match.group(2).strip()
+    return entries
+
+
+def _headings(path: Path) -> set[str]:
+    return {
+        line.lstrip("#").strip().lower()
+        for _, line in visible_lines(path.read_text(encoding="utf-8", errors="replace"))
+        if line.startswith("#")
+    }
+
+
 def _rel(path: Path, root: Path) -> str:
     try:
         return path.relative_to(root).as_posix()
@@ -260,6 +284,11 @@ def check_campaign(root: Path) -> list[Issue]:
         for path in chapter.adventures + chapter.encounters:
             if path not in links_from[chapter.chapter_file]:
                 add("warning", path, f"Not linked from its {CHAPTER_FILE}.")
+        for path in chapter.encounters:
+            headings = _headings(path)
+            for heading in (ENCOUNTER_SUMMARY, ENCOUNTER_TRACKER):
+                if heading.lower() not in headings:
+                    add("warning", path, f"The encounter has no '## {heading}' section.")
 
     sections = {campaign_file} | {
         path
