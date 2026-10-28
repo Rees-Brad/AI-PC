@@ -52,6 +52,9 @@ GITIGNORE = """\
 
 # Zip snapshots, used only when the campaign is not in a git repository.
 .campaign/snapshots/
+
+# PDFs made by /publish-campaign. Publish again to remake them.
+published/
 """
 
 INDEX_DESCRIPTIONS = {
@@ -92,6 +95,8 @@ approval before it is written.
   open items, checks the campaign, and takes a snapshot.
 - `/start-campaign`: when the campaign is ready to play, make a running
   copy for a group.
+- `/publish-campaign`: make a PDF of the campaign for readers or buyers,
+  after checking that it is ready. It writes only to `published/`.
 - `/create-collection` and `/create-epic`: organize several campaigns in
   one folder (see Git, collections, and epics).
 
@@ -265,6 +270,7 @@ books consistent with each other and with the epic's story.
   for timeline, character, and foreshadowing problems. It changes nothing.
 - `/save-campaign`: save your progress, here for the epic or in a book's
   folder for that book.
+- `/publish-campaign`: make one PDF per book, in reading order.
 
 Claude Code may show these with a prefix, such as
 `/campaign-agent:create-epic`.

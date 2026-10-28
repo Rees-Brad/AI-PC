@@ -21,6 +21,9 @@ def test_server_registers_campaign_tools() -> None:
         "encounter_xp",
         "ensure_campaign_docs",
         "extract_pdf_text",
+        "publish_campaign",
+        "publish_readiness",
+        "set_publish_details",
         "snapshot_campaign",
         "start_campaign",
     ]

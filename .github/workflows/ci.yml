@@ -19,6 +19,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install Pango (WeasyPrint, for campaign PDFs)
+        run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0
+
       - name: Install packages (shared first, then agents)
         run: |
           pip install --upgrade pip

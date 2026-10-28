@@ -17,6 +17,7 @@ This version supports:
 | `/check-epic` | Checks an epic's books against each other and reviews the story across them. Changes nothing. |
 | `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot. |
 | `/start-campaign` | Makes a running copy of a master campaign for a group. |
+| `/publish-campaign` | Release 2 beta: publishes a master campaign as a PDF, or an epic as one PDF per book. |
 
 Claude Code may show the commands with the plugin name as a prefix, such as
 `/campaign-agent:create-campaign`. Game Session and Update modes, which work
@@ -30,6 +31,10 @@ with the Scribe, come in a later version.
 - git, recommended. Campaigns work without it, but running copies are then
   plain folder copies with no history.
 - A clone of this repository.
+- For `/publish-campaign`, the Pango text library, which WeasyPrint uses to
+  make PDFs. Ubuntu and Debian: `sudo apt install libpango-1.0-0
+  libpangoft2-1.0-0`. macOS: `brew install pango`. See WeasyPrint's
+  installation guide for Windows.
 
 ## Install
 
@@ -157,6 +162,33 @@ edit it by hand.
   is cloned from the last commit; or
 - the destination folder already exists.
 
+### Publishing (Release 2 beta)
+
+`/publish-campaign` turns a finished master campaign into a PDF for readers
+or buyers. It first reports anything worth fixing: the usual checks plus
+placeholder text, empty sections, adventures with no map, and missing
+publishing details. You decide whether to fix them or publish anyway.
+
+The PDF has a title page, a copyright page, and a table of contents, then
+the overview, each chapter with its adventures and encounters, and the NPC,
+item, and location indexes as appendices. Bookmarks and cross-references
+are clickable, each map is printed once with the section that first shows
+it, and each encounter tracker gets its own page for writing on at the
+table. The working documents are left out.
+
+- Publishing details (author, copyright holder and year, rights statement,
+  license or attribution text, credits, cover image, footer notice, page
+  size, map appendix) are saved in `.campaign/publish.json` and reused by
+  every edition. The edition number is kept in the campaign marker.
+- PDFs are written to `published/`, which new campaigns leave out of git.
+  Publishing never changes the campaign files.
+- An epic is published as one PDF per book, in the order of `epic.md`'s
+  Books list. Details set on the epic apply to every book.
+- Running copies are never published, because they hold play history.
+
+Not yet: the print-ready PDF for print-on-demand services, watermarks,
+embedding the source for `/import-campaign`, and styling themes.
+
 ## Troubleshooting
 
 | Problem | What to do |
@@ -164,6 +196,7 @@ edit it by hand.
 | The commands don't appear | Reload VS Code. Check `claude plugin list` shows `campaign-agent@ai-pc` as enabled. |
 | `campaign` server not connected | Run `claude mcp list`. Check the Python interpreter option points at the Python where you installed the package: `claude plugin configure campaign-agent@ai-pc`. |
 | `No module named ai_campaign` | The configured Python does not have the package. Repeat step 1 with that Python. |
+| Publishing fails with a Pango or `libgobject` error | Install Pango (see Requirements), then start a new session so the MCP server restarts. |
 | Committing fails inside a campaign | Set your git identity: `git config --global user.name` and `user.email`. |
 
 To uninstall:
@@ -192,12 +225,13 @@ new session. To load the plugin without installing it, start the CLI with
 | `plugin/.claude-plugin/plugin.json` | Plugin manifest and the Python interpreter option |
 | `plugin/.mcp.json` | Starts the MCP server |
 | `plugin/skills/campaign-rules/` | Rules the agent follows in any campaign folder |
-| `plugin/skills/create-campaign/`, `check-campaign/`, `save-campaign/`, `start-campaign/` | The commands |
+| `plugin/skills/create-campaign/`, `check-campaign/`, `create-collection/`, `create-epic/`, `check-epic/`, `save-campaign/`, `start-campaign/`, `publish-campaign/` | The commands |
 | `src/ai_campaign/mcp_server.py` | MCP tools |
 | `src/ai_campaign/structure.py` | Reading and checking campaign folders |
 | `src/ai_campaign/lifecycle.py` | Creating masters, starting running copies, and snapshots |
 | `src/ai_campaign/gitops.py` | Git: commits scoped to one folder of a repository |
 | `src/ai_campaign/containers.py` | Collection and epic markers and membership |
+| `src/ai_campaign/publish.py` | Publishing readiness, publishing details, and the PDF |
 | `src/ai_campaign/epic.py` | Checks across an epic's books |
 | `src/ai_campaign/encounters.py` | Encounter XP and difficulty |
 | `src/ai_campaign/marker.py` | The `.campaign/campaign.json` marker |

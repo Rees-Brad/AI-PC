@@ -89,6 +89,7 @@ the agent does not require editing every campaign.
 | `/create-epic` | Starts or resumes an epic: books in subfolders tied together by `epic.md` (see Epic Campaigns). |
 | `/check-epic` | Checks an epic's books against each other, then reviews the story across books, without changing anything. |
 | `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot (see Working Documents). |
+| `/publish-campaign` | Release 2, in beta: publishes a master campaign as a PDF, or an epic as one PDF per book (see Release 2). |
 
 Command names are working names and can change during design. Because the
 commands come from a plugin, Claude Code may show them with the plugin's
@@ -778,6 +779,19 @@ The author is a new kind of user: someone who writes a campaign for other
 DMs rather than to run it themselves. Authors use the same Campaign
 Creation Mode as a DM.
 
+**Beta progress.** Release 2 is being built in stages while the first
+release is in beta testing:
+
+| Stage | Contents | Status |
+|---|---|---|
+| 1 | Readiness check, the digital PDF, publishing details and copyright, epics as one PDF per book | In beta |
+| 2 | Embedded source and `/import-campaign` | Next |
+| 3 | Watermarks | Planned |
+| 4 | Print-ready PDF, after checking print-on-demand services' requirements | Planned |
+| Later release | Styling: fonts and themes, from examples being collected | Deferred |
+
+The beta uses one plain default layout.
+
 ### Publish: campaign to a single PDF
 
 `/publish-campaign` turns a finished master campaign into one PDF document
@@ -807,8 +821,9 @@ suitable for sale.
   entry) are clickable links inside the PDF.
 - **Front matter.** The author supplies the title, author name, cover image,
   credits, and a license or copyright page (see Copyright and watermarks).
-- **Layout options.** At least page size (Letter or A4). Further styling,
-  such as fonts and themes, is decided when Release 2 is designed.
+- **Layout options.** Page size (Letter or A4). Further styling, such as
+  fonts and themes, is deferred to a later release; example styles are
+  being collected.
 - **Embedded source is optional.** By default the PDF embeds the campaign's
   source files so a buyer can import it (see Import). The author can
   publish without the embedded source, for buyers who will only read or
@@ -822,6 +837,16 @@ suitable for sale.
   in its master folder, not in the PDF. To release a revised edition, the
   author edits the master and publishes again. Keeping the master in git is
   recommended so each edition can be tagged and compared.
+- **Epics: one PDF per book.** Publishing an epic produces a separate PDF
+  for each book, numbered in the order of the Books list in `epic.md`, with
+  "Book N of <epic>" on each title page. Publishing details set on the epic
+  (author, copyright, edition) apply to every book unless a book sets its
+  own. The epic's own overview and indexes are not published, since they
+  plan the whole series.
+- **Where details and output live (beta defaults).** Publishing details are
+  saved in `.campaign/publish.json` and the edition in the campaign or epic
+  marker. PDFs are written to `published/` in the campaign or epic folder,
+  which the `.gitignore` of new campaigns excludes.
 
 ### Publish outputs: digital and print-ready
 

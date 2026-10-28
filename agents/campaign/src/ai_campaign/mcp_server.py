@@ -10,7 +10,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from ai_campaign import containers, encounters, epic, gitops, lifecycle, structure
+from ai_campaign import containers, encounters, epic, gitops, lifecycle, publish, structure
 from ai_campaign.pdf import extract_pdf_text as _extract_pdf_text
 
 server = MCPServer(
@@ -176,6 +176,84 @@ def start_campaign(
     with _reported():
         return lifecycle.start_campaign(
             _path(master_folder), group, _path(destination) if destination else None
+        )
+
+
+@server.tool()
+def publish_readiness(folder: str) -> dict[str, Any]:
+    """Check whether a master campaign, or every book of an epic, is ready to publish,
+    without changing anything: the campaign (or epic) checks, plus placeholder text, empty
+    sections, adventures with no map, and missing publishing details such as the author,
+    copyright holder, and edition. The author decides what to fix before publishing."""
+    with _reported():
+        issues = publish.readiness(_path(folder))
+    return {
+        "errors": sum(issue.severity == "error" for issue in issues),
+        "warnings": sum(issue.severity == "warning" for issue in issues),
+        "issues": structure.issues_as_dicts(issues),
+    }
+
+
+@server.tool()
+def set_publish_details(
+    folder: str,
+    edition: str | None = None,
+    author: str | None = None,
+    copyright_holder: str | None = None,
+    copyright_year: int | None = None,
+    rights: str | None = None,
+    license_text: str | None = None,
+    credits: str | None = None,
+    cover_image: str | None = None,
+    footer_notice: bool | None = None,
+    page_size: str | None = None,
+    map_appendix: bool | None = None,
+) -> dict[str, Any]:
+    """Save publishing details for a master campaign or an epic, reused by every edition.
+    Only the values given are changed. edition (such as "1.0") goes in the campaign or epic
+    marker; the rest in .campaign/publish.json. rights defaults to "All rights reserved.";
+    license_text holds license or attribution text, such as the SRD's CC-BY-4.0 notice;
+    credits is Markdown; cover_image is a path relative to the folder; footer_notice puts
+    the copyright line at the foot of every page; page_size is Letter or A4; map_appendix
+    adds full-page copies of every map. Books of an epic use the epic's details unless
+    they set their own."""
+    with _reported():
+        return publish.set_publish_details(
+            _path(folder),
+            edition=edition,
+            author=author,
+            copyright_holder=copyright_holder,
+            copyright_year=copyright_year,
+            rights=rights,
+            license_text=license_text,
+            credits=credits,
+            cover_image=cover_image,
+            footer_notice=footer_notice,
+            page_size=page_size,
+            map_appendix=map_appendix,
+        )
+
+
+@server.tool()
+def publish_campaign(
+    folder: str,
+    page_size: str | None = None,
+    map_appendix: bool | None = None,
+    output_folder: str | None = None,
+) -> dict[str, Any]:
+    """Publish a master campaign as a digital PDF: title page, copyright page, contents,
+    the overview, chapters with their adventures and encounters, each encounter tracker on
+    its own page, and the indexes as appendices, with bookmarks and clickable links. An
+    epic is published as one PDF per book, in reading order. Writes only to the output
+    folder (default: published/ inside the folder); campaign files are never changed.
+    Refuses running copies. page_size and map_appendix override the saved details for this
+    publish only. Run publish_readiness first."""
+    with _reported():
+        return publish.publish(
+            _path(folder),
+            page_size=page_size,
+            output_folder=_path(output_folder) if output_folder else None,
+            map_appendix=map_appendix,
         )
 
 
