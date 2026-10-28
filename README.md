@@ -29,7 +29,8 @@ character/rules schema, persistence, and the Anthropic client wrapper.
 The AI Player Character agent ([`agents/pc/`](agents/pc/)), the Dungeon
 Master agent ([`agents/dm/`](agents/dm/)), and the NPC agent
 ([`agents/npc/`](agents/npc/)) are on hold. Their requirements will be
-redone after the first release.
+redone after the first release. The Dungeon Master agent may be dropped,
+since the Campaign Agent now reviews prepared adventures.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup and how to run
 tests/lint/type-checks locally.

@@ -2,28 +2,20 @@
 
 ## Purpose
 
-The Campaign Agent helps the DM create and maintain a long-running campaign.
-It assists in developing the campaign's central story arc and a collection
-of adventure modules, then helps adapt the remaining campaign after each
-game session based on what actually happened at the table.
+The Campaign Agent helps the DM create and maintain a role play game, think D&D, campaign. It needs to be stated that this is not having the AI generate a campaign! The AI Agent only assists in developing the campaign's central story arc and a collection of adventure modules, then helps adapt the remaining campaign after each game session based on what actually happened at the table. The Agent will do as much or as little as the Human campaign developer wants.  The main intent is for the Agent to assist the developer and validate the camapign for story hole, so handle many of the secondary rote tasks, like creating secondary NPC and place names, creating encounter stat blocks, etc.
 
-The campaign should have direction without forcing the players down a
-single path. Side quests, alternate leads, and meaningful consequences
-give the players room to choose what matters to them.
+There are many styles of campaings, all supported here.  From very short one or two encounter campaigns that are perfect for side questions, too multi-year epic campaigns that take characters from level 1 to level 20.  For the most part, a campaign should have direction without forcing the players down a single path. Having side quests, alternate paths, and meaningful consequences give the players room to choose what matters to them. But keeping track of all those paths can be a burden for a developer but is a perfect hit for an AI Agent.
 
 A campaign at a minimum must have:
   1. A goal (objective)
   2. One adventure with at least one encounter
 
-The Campaign Agent works with the other agents to continually update
-future modules to keep the story progressing. The first release pairs it
-with the Scribe; the DM Agent is on hold, so the DM Agent's step below
-describes the intended direction rather than first-release work.
+The Campaign Agent can work with the other agents to continually update future modules to keep the story progressing. The first release pairs it with the Scribe.
 A useful workflow could be:
 
 1. Campaign Agent builds the central arc, setting, factions, key NPCs, and a collection of adventure modules. Each module can have multiple hooks, outcomes, and ways to connect back to the larger story.
 2. Before game night, the Campaign Agent selects and adapts the next module based on where the characters are and what they’ve chosen to pursue.
-3. DM Agent reviews it for playability and whether its events still fit the larger arc.
+3. Campaign Agent reviews it for playability and whether its events still fit the larger arc (see Update Mode).
 4. Scribe Agent checks campaign records for continuity: NPC relationships, unresolved events, character knowledge, and consequences that the draft might contradict.
 5. Campaign Agent incorporates those reviews and offers side quests or alternate leads that feel connected to the world, while keeping the main arc available rather than compulsory.
 
@@ -341,6 +333,16 @@ the rest of the campaign based on what happened at the table.
     information to reach the party, such as a new NPC who carries it, and a
     fallback, such as a book containing it, in case the players kill that
     NPC too.
+- Before the next session, the agent reviews the adventure the party is
+  likely to play next, and reports problems for the DM to decide on:
+  - **Playability:** each encounter's difficulty for the party's current
+    levels (from `encounter_xp`); whether stat blocks, the tracker, and
+    maps are in place; and whether the party has a way into the adventure
+    given what the characters know (from the Scribe).
+  - **Fit with the arc:** events that depend on an NPC who has died, an
+    item that is lost, or a thread that has closed; and whether the
+    adventure still moves the main arc or a thread the players chose. In
+    an epic, this includes the epic's later books.
 - The agent calculates experience points earned from fights, checks
   whether characters qualify to level up under the campaign's advancement
   rules, and surfaces the results for the DM to confirm.
@@ -386,12 +388,16 @@ Its earlier requirements are kept here for when it returns:
 
 ## Collaboration with Other Agents
 
-### DM Agent (on hold)
+### DM Agent (on hold, may be dropped)
 
-Not part of the first release. The DM reviews a prepared adventure for playability and fit with the
-campaign's story arc. The Campaign Agent can revise the adventure in
-response to that review. The DM remains the final authority over what
-happens at the table.
+Not part of the first release. Reviewing a prepared adventure for
+playability and fit with the story arc was planned as DM Agent work, but
+it uses the campaign files, the encounter tools, and the Scribe's record,
+so the Campaign Agent does it (see Update Mode). That leaves the DM Agent
+without a defined role. Help during play is largely covered by the Scribe
+and by the DM working with Claude Code directly, so the DM Agent may be
+dropped; this will be decided after the first release. The DM remains the
+final authority over what happens at the table.
 
 ### Scribe Agent
 
