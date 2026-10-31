@@ -16,6 +16,7 @@ from ai_campaign.lifecycle import (
     start_campaign,
 )
 from ai_campaign.marker import read_marker
+from ai_campaign.systems import rules_family
 
 
 def git(folder: Path, *args: str) -> str:
@@ -157,6 +158,29 @@ def test_srd_attribution() -> None:
     assert srd_attribution("D&D 5e (2024)") == SRD_5_2_ATTRIBUTION
     assert srd_attribution("5e, SRD 5.1") == SRD_5_1_ATTRIBUTION
     assert srd_attribution("Pathfinder") is None
+    assert "Open Game License version 1.0a" in (srd_attribution("D&D 3.5") or "")
+    assert srd_attribution("D&D 3.5e") == srd_attribution("dnd v3.5")
+
+
+@pytest.mark.parametrize(
+    "rules, family",
+    [
+        ("D&D 5e (2024)", "D&D 5e (2024)"),
+        ("5e, SRD 5.1", "D&D 5e (2014)"),
+        ("D&D 3.5", "D&D 3.5"),
+        ("3.5e", "D&D 3.5"),
+        ("D&D 13.5", None),
+        ("Pathfinder 1e", None),
+    ],
+)
+def test_rules_family(rules: str, family: str | None) -> None:
+    assert rules_family(rules) == family
+
+
+def test_3_5_campaign_records_the_ogl(tmp_path: Path) -> None:
+    create_campaign(tmp_path / "keep", "The Keep", rules="D&D 3.5")
+    text = (tmp_path / "keep" / "campaign.md").read_text()
+    assert "D&D 3.5." in text and "Section 15" in text
 
 
 def test_ensure_campaign_docs_adds_only_missing_files(campaign: Path) -> None:

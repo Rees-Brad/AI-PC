@@ -1,35 +1,56 @@
 # Campaign Agent Requirements
 
+What the Campaign Agent must do, and why. How DMs use it is in the
+[User Guide](USER_GUIDE.md); how it is built is in [DESIGN.md](DESIGN.md).
+
 ## Purpose
 
-The Campaign Agent helps the DM create and maintain a long-running campaign.
-It assists in developing the campaign's central story arc and a collection
-of adventure modules, then helps adapt the remaining campaign after each
-game session based on what actually happened at the table.
+The Campaign Agent helps the DM create and maintain a role play game, think D&D, campaign. It needs to be stated that this is not having the AI generate a campaign! The AI Agent only assists in developing the campaign's central story arc and a collection of adventure modules, then helps adapt the remaining campaign after each game session based on what actually happened at the table. The Agent will do as much or as little as the Human campaign developer wants.  The main intent is for the Agent to assist the developer and validate the camapign for story hole, so handle many of the secondary rote tasks, like creating secondary NPC and place names, creating encounter stat blocks, etc.
 
-The campaign should have direction without forcing the players down a
-single path. Side quests, alternate leads, and meaningful consequences
-give the players room to choose what matters to them.
+There are many styles of campaings, all supported here.  From very short one or two encounter campaigns that are perfect for side questions, too multi-year epic campaigns that take characters from level 1 to level 20.  For the most part, a campaign should have direction without forcing the players down a single path. Having side quests, alternate paths, and meaningful consequences give the players room to choose what matters to them. But keeping track of all those paths can be a burden for a developer but is a perfect hit for an AI Agent.
 
 A campaign at a minimum must have:
   1. A goal (objective)
   2. One adventure with at least one encounter
 
-The Campaign Agent works with the other agents to continually update
-future modules to keep the story progressing. The first release pairs it
-with the Scribe; the DM Agent is on hold, so the DM Agent's step below
-describes the intended direction rather than first-release work.
+The Campaign Agent can work with the other agents to continually update future modules to keep the story progressing. The first release pairs it with the Scribe.
 A useful workflow could be:
 
 1. Campaign Agent builds the central arc, setting, factions, key NPCs, and a collection of adventure modules. Each module can have multiple hooks, outcomes, and ways to connect back to the larger story.
 2. Before game night, the Campaign Agent selects and adapts the next module based on where the characters are and what they’ve chosen to pursue.
-3. DM Agent reviews it for playability and whether its events still fit the larger arc.
+3. Campaign Agent reviews it for playability and whether its events still fit the larger arc (see Update Mode).
 4. Scribe Agent checks campaign records for continuity: NPC relationships, unresolved events, character knowledge, and consequences that the draft might contradict.
 5. Campaign Agent incorporates those reviews and offers side quests or alternate leads that feel connected to the world, while keeping the main arc available rather than compulsory.
 
 The Campaign Agent is a tool for the DM. Players do not use it, because
 campaign files contain plans the players must not see; during play, players
 ask the Scribe about what has happened.
+
+## Supported Game Systems
+The following game systems and versions are supported:
+
+
+| System | Version |  Note  |
+|---|---|---|
+| Dungeons & Dragons, 5th edition | 2024 rules (SRD 5.2) | The default. SRD 5.2 attribution (CC-BY-4.0). Encounters rated Low, Moderate, or High from the 2024 XP budgets. |
+| Dungeons & Dragons, 5th edition | 2014 rules (SRD 5.1) | SRD 5.1 attribution (CC-BY-4.0). XP by Challenge Rating; difficulty is rated by the agent, because the 2014 thresholds are not built in. |
+| Dungeons & Dragons, 3rd edition | 3.5 (SRD 3.5) | Open Game Content under the Open Game License 1.0a. 3.5 stat blocks and trackers. Encounter Level and difficulty (Easy, Challenging, Very difficult, Overpowering); XP awards approximate the Dungeon Master's Guide table, which is not in the SRD, so the DM checks them. |
+| Other systems | Any | Not supported. The system named is recorded, with no attribution or encounter arithmetic. Structure, indexes, maps, checks, and publishing still work. |
+
+- A campaign records its system and edition in the `## Rules` section of
+  `campaign.md` and in the campaign marker. Books of an epic use the epic's
+  edition.
+- The XP-by-Challenge-Rating table, the 2024 XP budgets, the 3.5
+  Encounter Level and XP rules, and the SRD
+  attribution text must be checked against the published SRD documents
+  before Release 2 is published.
+- Publishing a 3.5 campaign needs more than a line of attribution: the
+  full text of the Open Game License 1.0a, its Section 15 notice, and a
+  statement of which material is Open Game Content. The author supplies
+  the license text; the agent does not reproduce it.
+- Adding a system means adding its open-license attribution, where it has
+  one, and its encounter arithmetic, and testing stat blocks against its
+  reference document.
 
 ## Working Environment: VS Code and Claude Code
 
@@ -39,19 +60,12 @@ Campaign Agent therefore runs inside VS Code, with Claude Code as the
 conversation with the agent. The browser-based interface from the first
 version is retired.
 
-```text
-┌────────────┬──────────────────────┬──────────────────┬──────────────┐
-│ Explorer   │ Adventure (Markdown  │ Map (image)      │ Claude Code  │
-│ (campaign  │ preview)             │                  │ (agent chat) │
-│ tree)      │                      │                  │              │
-└────────────┴──────────────────────┴──────────────────┴──────────────┘
-```
-
 - The DM opens a campaign folder as the VS Code workspace. The Explorer
   shows the full campaign structure: campaign, chapters, adventures,
   encounters, maps, and session summaries.
 - The DM can read any section as formatted Markdown (Markdown preview)
-  while the map for that section is open beside it in a split editor.
+  while the map for that section is open beside it in a split editor (the
+  layout is shown in the User Guide).
   Seeing the map while an adventure is being developed is a core
   requirement, not an extra.
 - The main interaction is an ongoing natural-language conversation in
@@ -70,18 +84,10 @@ version is retired.
 ### Packaging
 
 The Campaign Agent is installed once and then works in any campaign
-folder. It is packaged as a Claude Code plugin made up of:
-
-| Part | Purpose |
-|---|---|
-| Agent instructions | The Create and Update rules in this document, such as one file per section and keeping indexes consistent. |
-| Commands | Entry points for the main workflows (see Commands). |
-| Campaign MCP server | Python tools for work that needs real logic: checking campaign structure and links, finding broken references after a move, extracting text from PDF starting material, starting a running copy, and starting and stopping the Scribe for a game session. |
-| Scribe MCP server | Read-only access to the Scribe's record so the DM and agent can ask the Scribe questions privately, outside Discord, at any time (see Collaboration with Other Agents). Provided by the Scribe agent. |
-
-Campaign folders contain campaign material plus the DM's working documents
-(see Working Documents). Agent instructions live in the plugin, so improving
-the agent does not require editing every campaign.
+folder. It is a Claude Code plugin: agent instructions, commands, and an
+MCP server for work that needs real logic, alongside the Scribe's own
+plugin for private queries (see DESIGN.md). Agent instructions live in the
+plugin, so improving the agent does not require editing every campaign.
 
 ### Commands
 
@@ -97,6 +103,7 @@ the agent does not require editing every campaign.
 | `/create-epic` | Starts or resumes an epic: books in subfolders tied together by `epic.md` (see Epic Campaigns). |
 | `/check-epic` | Checks an epic's books against each other, then reviews the story across books, without changing anything. |
 | `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot (see Working Documents). |
+| `/publish-campaign` | Release 2, in beta: publishes a master campaign as a PDF, or an epic as one PDF per book (see Release 2). |
 
 Command names are working names and can change during design. Because the
 commands come from a plugin, Claude Code may show them with the plugin's
@@ -134,8 +141,8 @@ campaign, so:
 - The agent explains the master/running-copy split when a campaign is
   first created and again when it is started.
 - Each campaign folder records whether it is a master or a running copy,
-  and a running copy records which master it came from (see Campaign
-  marker).
+  and a running copy records which master it came from (see Campaign File
+  Structure).
 - The agent refuses to run Game Session or Update Mode on a master campaign
   and offers to make a running copy instead.
 - Create Mode works on a master. Structural fixes made to a running copy
@@ -154,14 +161,12 @@ workflow also works with plain folders.
   offers to create one; without it, snapshots are zip files.
 - Creation checkpoints are commits, made by `/save-campaign`. A commit
   covers only the folder being saved.
-- `/start-campaign` makes the running copy with `git clone` when the master
-  is the top folder of its repository. When the master is a subfolder, as
-  in a collection or epic, the running copy is a sibling folder in the same
-  repository, committed there. Without git it is a plain folder copy.
+- `/start-campaign` records the master's commit in the running copy, so it
+  is always clear which version of the master a group is playing.
 - After an update is accepted, the agent offers to commit it with a message
   that names the session, for example "Update after session 2026-10-20".
-- VS Code's Source Control view shows exactly what each update changed, and
-  any change can be rolled back.
+- The DM can see exactly what each update changed, and roll back any
+  change.
 - Fixes made to the master later, such as a corrected map, can be pulled
   into a running copy when the DM chooses. The agent never merges master
   changes on its own.
@@ -179,8 +184,6 @@ One git repository, created by the DM, holds one of three structures:
 | Collection | `/create-collection` in the repository's folder, then `/create-campaign` in a subfolder for each campaign | Independent campaigns, such as one collection per level range |
 | Epic | `/create-epic` in the repository's folder, then `/create-campaign` in a subfolder for each book | The books of one long story, tied together (see Epic Campaigns) |
 
-- Collections and epics are marked by `.campaign/collection.json` and
-  `.campaign/epic.json`. Their campaigns are ordinary subfolders.
 - A campaign, collection, or epic cannot be created inside a campaign
   folder, and an epic cannot be inside a collection or another epic.
 - Saving commits only the folder being saved: one campaign or book, or a
@@ -189,15 +192,8 @@ One git repository, created by the DM, holds one of three structures:
 - "Uncommitted changes" checks before starting a running copy look only
   at the master's folder.
 
-Current beta default, to be revisited after beta testing:
-
-| Choice | Default | Alternatives considered |
-|---|---|---|
-| Where a running copy goes in a collection or epic | A sibling folder in the same repository, committed there | A separate repository outside; ask each time |
-
-An earlier design gave each campaign its own repository and joined them
-with git submodules. Beta testers liked the structures but not submodules,
-so every structure now lives in one repository.
+Where running copies go, and other beta defaults, are recorded in
+DESIGN.md for review after beta testing.
 
 ## Operating Modes
 
@@ -222,8 +218,8 @@ together to develop the idea into a master campaign.
   inform campaign creation. Supported documents include text files and PDFs
   with selectable text; scanned PDFs without an OCR text layer are not
   supported.
-- Each campaign records its rules edition in `campaign.md`. The default is
-  D&D 5e (2024); the DM can name another edition, such as D&D 5e (2014),
+- Each campaign records its rules edition. The default is D&D 5e (2024);
+  the DM can name another supported edition (see Supported Game Systems)
   when the campaign is created or later. All rules content follows the
   recorded edition.
 - The agent asks questions and offers options to help flesh out the
@@ -341,6 +337,16 @@ the rest of the campaign based on what happened at the table.
     information to reach the party, such as a new NPC who carries it, and a
     fallback, such as a book containing it, in case the players kill that
     NPC too.
+- Before the next session, the agent reviews the adventure the party is
+  likely to play next, and reports problems for the DM to decide on:
+  - **Playability:** each encounter's difficulty for the party's current
+    levels (from `encounter_xp`); whether stat blocks, the tracker, and
+    maps are in place; and whether the party has a way into the adventure
+    given what the characters know (from the Scribe).
+  - **Fit with the arc:** events that depend on an NPC who has died, an
+    item that is lost, or a thread that has closed; and whether the
+    adventure still moves the main arc or a thread the players chose. In
+    an epic, this includes the epic's later books.
 - The agent calculates experience points earned from fights, checks
   whether characters qualify to level up under the campaign's advancement
   rules, and surfaces the results for the DM to confirm.
@@ -386,12 +392,16 @@ Its earlier requirements are kept here for when it returns:
 
 ## Collaboration with Other Agents
 
-### DM Agent (on hold)
+### DM Agent (on hold, may be dropped)
 
-Not part of the first release. The DM reviews a prepared adventure for playability and fit with the
-campaign's story arc. The Campaign Agent can revise the adventure in
-response to that review. The DM remains the final authority over what
-happens at the table.
+Not part of the first release. Reviewing a prepared adventure for
+playability and fit with the story arc was planned as DM Agent work, but
+it uses the campaign files, the encounter tools, and the Scribe's record,
+so the Campaign Agent does it (see Update Mode). That leaves the DM Agent
+without a defined role. Help during play is largely covered by the Scribe
+and by the DM working with Claude Code directly, so the DM Agent may be
+dropped; this will be decided after the first release. The DM remains the
+final authority over what happens at the table.
 
 ### Scribe Agent
 
@@ -431,32 +441,26 @@ source of truth for events that have occurred in play.
 
 An encounter file must let the DM run the fight without any other book.
 
-- **Stat blocks.** Every creature has a full stat block: size, type, and
-  alignment; AC; HP; speed; ability scores; saving throws and skills;
-  immunities, resistances, and vulnerabilities; senses; languages; CR and
-  XP; traits; and actions, bonus actions, reactions, and legendary actions
-  where they apply. A name such as "thug" or "scout" on its own is not
+- **Stat blocks.** Every creature has a full stat block in the recorded
+  edition's format. A name such as "thug" or "scout" on its own is not
   enough. Each different creature's stat block appears once per encounter,
   with how many appear.
 - **Named NPCs** who fight get their own stat block, built from a base
   creature with their changes noted.
 - **Sources.** Standard creatures come only from the open-licensed System
-  Reference Document for the recorded edition (SRD 5.2 for D&D 5e 2024,
-  SRD 5.1 for 5e 2014), or are written new. Stat blocks are never copied
+  Reference Document for the recorded edition, or are written new. Stat blocks are never copied
   from other books, because campaigns may be published and sold (see
   Release 2). When SRD material is used, `campaign.md` carries the SRD's
   attribution statement.
 - **Encounter summary.** Each encounter starts with a summary: the party
-  it is built for, each creature's Challenge Rating, count, and XP, the
-  fight's total XP and XP per character, and its difficulty for that party
-  (Low, Moderate, or High in D&D 5e 2024). The figures come from an
-  `encounter_xp` tool so the arithmetic is right; for other editions the
-  tool gives the XP and the agent rates difficulty by that edition's rules.
+  it is built for, each creature's Challenge Rating and count, the fight's
+  XP, and its difficulty for that party in the edition's terms. The figures
+  come from a tool, not the model's own arithmetic.
   Each difficulty variant has its own totals. XP actually awarded in play
   is tracked by Update Mode after the session.
 - **Encounter tracker.** Each encounter ends with a table the DM can print
-  and write on: one row per individual creature, with CR, AC, HP, damage
-  taken, conditions, and initiative. Difficulty variants add their own rows.
+  and write on: one row per individual creature, with its defenses, hit
+  points, damage taken, conditions, and initiative. Difficulty variants add their own rows.
 - `/check-campaign` warns about encounters missing their summary or
   tracker.
 - An adventure that includes a fight either contains the stat blocks or
@@ -470,27 +474,20 @@ so the DM does not have to scroll back through chat to find what was said.
 
 | File | Purpose |
 |---|---|
-| `GETTING_STARTED.md` | Created with the campaign and pointed out to the DM straight away. Explains the commands, the working documents, saving and resuming, the VS Code layout, maps, and master and running copies. |
+| `GETTING_STARTED.md` | Created with the campaign and pointed out to the DM straight away: a short, in-folder version of the User Guide. |
 | `OPEN_ITEMS.md` | A checklist of open questions and unfinished work, grouped by area and linked to the files concerned. The agent adds items as they come up and checks them off with the date when done. The DM can reorder items, mark priorities, and add their own; the agent respects those edits and starts with the DM's priorities. |
 | `WORKLOG.md` | A journal, newest entry first. After each working session the agent records what was done, decisions made and why, and ideas set aside. |
 
 - **Saving.** `/save-campaign` updates `OPEN_ITEMS.md` and `WORKLOG.md`,
-  runs the campaign check, and takes a snapshot: a git commit
-  ("Snapshot: <summary>") when the campaign is a git repository, or a zip
-  file in `.campaign/snapshots/` otherwise. The agent offers to save at
-  natural stopping points.
+  runs the campaign check, and takes a snapshot the DM can return to. The
+  agent offers to save at natural stopping points.
 - **Resuming.** `/create-campaign` in an existing master reads the latest
   work log entries, the open items, and the check results, then summarizes
   where things stand and suggests what to work on next.
-- **Conversation history.** Claude Code saves every conversation, and the
-  DM can reopen one from the past conversations list in the Claude Code
-  panel. The working documents mean the agent does not depend on that
-  history to resume.
 - Campaigns created before these documents existed get them added, without
   changing any existing file, the next time they are resumed.
 - The working documents are for the DM and the agent. They are not
-  campaign content: links in `GETTING_STARTED.md` and `WORKLOG.md` are not
-  checked, and Publish (Release 2) leaves all three out of the PDF.
+  campaign content: Publish (Release 2) leaves all three out of the PDF.
 
 ## Campaign Indexes
 
@@ -525,36 +522,6 @@ Each campaign section has its own Markdown file. Chapter folders group
 their chapter outline with the adventures and standalone NPC encounters
 that belong to it.
 
-```text
-<campaign-name>/
-  campaign.md
-  GETTING_STARTED.md        # working documents (see Working Documents)
-  OPEN_ITEMS.md
-  WORKLOG.md
-  npcs.md
-  items.md
-  locations.md
-  maps/
-    <map-name>.png
-  chapters/
-    01-<chapter-name>/
-      chapter.md
-      adventures/
-        01-<adventure-name>.md
-      encounters/
-        01-<encounter-name>.md
-  sessions/                 # running copy only, written by the Scribe
-    2026-10-20.md
-  .scribe/                  # running copy only, the Scribe's data
-  .campaign/
-    campaign.json           # the campaign marker, written by the agent's tools
-    snapshots/              # zip snapshots, only when the campaign does not use git
-  .gitignore
-```
-
-Empty `maps/`, `chapters/`, and `sessions/` folders hold a `.gitkeep` file
-so git keeps them.
-
 - `campaign.md` contains the campaign overview, central story arc, goals,
   and links to the chapters and the three indexes.
 - `npcs.md`, `items.md`, and `locations.md` are the campaign indexes (see
@@ -568,36 +535,16 @@ so git keeps them.
   file for reference, but must not require that file during the session.
 - Number prefixes keep chapters and their contents in story order; names
   make the files easy to identify and navigate.
-- All map files for the campaign are stored in the `maps/` folder. Campaign,
-  chapter, and adventure files link to them with relative Markdown links.
+- All map files for the campaign are stored in the `maps/` folder, and
+  sections link to them with relative links.
 - `sessions/` and `.scribe/` exist only in a running copy. The Campaign
   Agent creates the empty `sessions/` folder when it starts a running copy,
   reads the summaries the Scribe writes there, and otherwise never writes
   to either folder.
-
-### Campaign marker
-
-`.campaign/campaign.json` records what kind of campaign folder this is. Only
-the agent's tools write it; the DM and the agent's conversation do not edit
-it by hand.
-
-| Key | Meaning |
-|---|---|
-| `role` | `master` or `running`. |
-| `title` | The campaign's title. |
-| `created` | Date the master was created. |
-| `format_version` | Version of the marker format, currently 1. |
-| `rules` | The rules edition, such as `D&D 5e (2024)`. |
-| `edition` | The master's edition, for Release 2 publishing. |
-| `source_master` | Running copy only: the master folder it was made from. |
-| `source_commit` | Running copy only: the master's git commit it was cloned from. |
-| `group` | Running copy only: the group it is for. |
-| `started` | Running copy only: date it was started. |
-
-Keys the agent does not recognize are kept when the marker is rewritten, so
-later versions and the Scribe can add their own, such as the group's
-Discord channel and whether a game session is open. Other metadata
-conventions, such as front matter in section files, remain to be decided.
+- Each campaign folder records whether it is a master or a running copy,
+  its rules edition, and, for a running copy, its master and group. Only
+  the agent's tools write this record. The folder layout and the record's
+  format are in DESIGN.md.
 
 ## Maps
 
@@ -635,8 +582,8 @@ the later levels.
 - The DM adds a map by saving it into `maps/`, for example by dragging it
   into the Explorer. The agent proposes the Markdown image link in the
   right section, using the normal review-before-accept step.
-- Map links are image embeds, such as `![Smugglers' cove](../../maps/cove.png)`,
-  so the map appears in the section's Markdown preview.
+- Map links are image embeds, so the map appears in the section's
+  Markdown preview.
 - The DM can open any map at full size beside the section it belongs to.
 - Replacing a map file with an edited version under the same name keeps
   every link to it valid.
@@ -687,19 +634,8 @@ campaign in its own subfolder.
 
 ### The epic folder
 
-```text
-<epic>/
-  epic.md            the epic's story, rules edition, and Books list in reading order
-  npcs.md            NPCs who matter across books
-  items.md           items that matter across books
-  locations.md       places that matter across books
-  GETTING_STARTED.md the DM's guide to working with an epic
-  OPEN_ITEMS.md      open questions for the epic as a whole
-  WORKLOG.md         journal of work on the epic
-  .campaign/epic.json
-  01-<book>/         a book: a full campaign
-  02-<book>/
-```
+The epic's folder holds its overview (`epic.md`), epic-wide NPC, item, and
+location indexes, its own working documents, and one subfolder per book.
 
 - `epic.md`'s **Books** section is a numbered list in reading order, each
   item linking to a book's `campaign.md` with its level range. The agent
@@ -772,6 +708,9 @@ The author is a new kind of user: someone who writes a campaign for other
 DMs rather than to run it themselves. Authors use the same Campaign
 Creation Mode as a DM.
 
+Release 2 is built in stages while the first release is in beta testing;
+the README shows what is available now.
+
 ### Publish: campaign to a single PDF
 
 `/publish-campaign` turns a finished master campaign into one PDF document
@@ -801,8 +740,9 @@ suitable for sale.
   entry) are clickable links inside the PDF.
 - **Front matter.** The author supplies the title, author name, cover image,
   credits, and a license or copyright page (see Copyright and watermarks).
-- **Layout options.** At least page size (Letter or A4). Further styling,
-  such as fonts and themes, is decided when Release 2 is designed.
+- **Layout options.** Page size (Letter or A4). Further styling, such as
+  fonts and themes, is deferred to a later release; example styles are
+  being collected.
 - **Embedded source is optional.** By default the PDF embeds the campaign's
   source files so a buyer can import it (see Import). The author can
   publish without the embedded source, for buyers who will only read or
@@ -816,6 +756,12 @@ suitable for sale.
   in its master folder, not in the PDF. To release a revised edition, the
   author edits the master and publishes again. Keeping the master in git is
   recommended so each edition can be tagged and compared.
+- **Epics: one PDF per book.** Publishing an epic produces a separate PDF
+  for each book, numbered in the order of the Books list in `epic.md`, with
+  "Book N of <epic>" on each title page. Publishing details set on the epic
+  (author, copyright, edition) apply to every book unless a book sets its
+  own. The epic's own overview and indexes are not published, since they
+  plan the whole series.
 
 ### Publish outputs: digital and print-ready
 
@@ -945,10 +891,3 @@ of experience the players should have.
   revises only what lies ahead?
 - Should the Scribe's database in `.scribe/` be committed with the
   campaign, or excluded and backed up separately?
-- **User Guide (to discuss).** A User Guide that explains the agent in
-  depth for DMs and authors: what it does, how to work with it across
-  creation, game sessions, and updates, and the different campaign options
-  (a single campaign, collections, and later epics and large books), with
-  when to choose each. Its scope, audience, and format, and how it relates
-  to the README, TESTING.md, and each campaign's `GETTING_STARTED.md`, are
-  still to be discussed.

@@ -8,7 +8,7 @@ import zipfile
 from datetime import date, datetime
 from pathlib import Path
 
-from ai_campaign import containers, gitops
+from ai_campaign import containers, gitops, systems
 from ai_campaign.marker import CampaignMarker, read_marker, write_marker
 from ai_campaign.structure import (
     CAMPAIGN_FILE,
@@ -21,26 +21,17 @@ from ai_campaign.structure import (
     SESSIONS_DIR,
     WORKLOG_FILE,
 )
+from ai_campaign.systems import (  # noqa: F401 - re-exported for callers and tests
+    SRD_5_1_ATTRIBUTION,
+    SRD_5_2_ATTRIBUTION,
+    srd_attribution,
+)
 
-DEFAULT_RULES = "D&D 5e (2024)"
+DEFAULT_RULES = systems.DND_5E_2024
 SNAPSHOTS_DIR = Path(".campaign") / "snapshots"
 
 # Files a new, otherwise empty campaign folder may already contain.
 ALLOWED_IN_NEW_FOLDER = {".git", ".vscode", ".DS_Store"}
-
-SRD_5_2_ATTRIBUTION = (
-    "This work includes material from the System Reference Document 5.2 (\"SRD 5.2\") by "
-    "Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2 is "
-    "licensed under the Creative Commons Attribution 4.0 International License, available "
-    "at https://creativecommons.org/licenses/by/4.0/legalcode."
-)
-SRD_5_1_ATTRIBUTION = (
-    "This work includes material taken from the System Reference Document 5.1 (\"SRD 5.1\") "
-    "by Wizards of the Coast LLC and available at "
-    "https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 is licensed "
-    "under the Creative Commons Attribution 4.0 International License available at "
-    "https://creativecommons.org/licenses/by/4.0/legalcode."
-)
 
 GITIGNORE = """\
 # Secrets never belong in a campaign.
@@ -52,6 +43,9 @@ GITIGNORE = """\
 
 # Zip snapshots, used only when the campaign is not in a git repository.
 .campaign/snapshots/
+
+# PDFs made by /publish-campaign. Publish again to remake them.
+published/
 """
 
 INDEX_DESCRIPTIONS = {
@@ -92,6 +86,8 @@ approval before it is written.
   open items, checks the campaign, and takes a snapshot.
 - `/start-campaign`: when the campaign is ready to play, make a running
   copy for a group.
+- `/publish-campaign`: make a PDF of the campaign for readers or buyers,
+  after checking that it is ready. It writes only to `published/`.
 - `/create-collection` and `/create-epic`: organize several campaigns in
   one folder (see Git, collections, and epics).
 
@@ -265,6 +261,7 @@ books consistent with each other and with the epic's story.
   for timeline, character, and foreshadowing problems. It changes nothing.
 - `/save-campaign`: save your progress, here for the epic or in a book's
   folder for that book.
+- `/publish-campaign`: make one PDF per book, in reading order.
 
 Claude Code may show these with a prefix, such as
 `/campaign-agent:create-epic`.
@@ -309,16 +306,6 @@ def slugify(name: str) -> str:
     if not slug:
         raise ValueError("The name must contain at least one letter or digit.")
     return slug
-
-
-def srd_attribution(rules: str) -> str | None:
-    """The attribution statement for the open-licensed SRD that matches a rules edition."""
-    lowered = rules.lower()
-    if "2024" in lowered or "5.2" in lowered:
-        return SRD_5_2_ATTRIBUTION
-    if "2014" in lowered or "5.1" in lowered:
-        return SRD_5_1_ATTRIBUTION
-    return None
 
 
 def _rules_text(rules: str) -> str:

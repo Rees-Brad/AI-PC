@@ -29,8 +29,8 @@ Follow the `campaign-rules` skill throughout, especially "Books of an epic".
      story and the books in reading order; the epic's indexes track NPCs,
      items, and places that matter across books.
    - Ask for the title, unless given: $ARGUMENTS. Tell the DM the epic uses
-     D&D 5e (2024) unless they want another edition; every book will use
-     the same edition.
+     D&D 5e (2024) unless they want D&D 5e (2014) or D&D 3.5; every book
+     will use the same edition.
    - If `git.repository` is empty, offer to create the git repository
      (`init_git=true`), as the DM normally creates it first.
    - Call `create_epic`, then point the DM to `GETTING_STARTED.md` (Ctrl+Shift+V

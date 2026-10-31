@@ -128,6 +128,16 @@ Check:
 Check: `campaign.md` records the 2014 edition with the SRD 5.1 attribution,
 and stat blocks follow that edition.
 
+2. In another empty folder, run `/create-campaign` and ask for D&D 3.5.
+   Ask for an encounter with four orcs for four level 1 characters.
+
+Check: `campaign.md` says the SRD 3.5 material is Open Game Content under
+the OGL 1.0a, with its Section 15 notice. The stat blocks use the 3.5
+format (Hit Dice, Base Attack/Grapple, Fort/Ref/Will). The summary gives
+Encounter Level 3 and "Very difficult", and calls the XP approximate. The
+tracker shows AC with touch and flat-footed. `/publish-campaign` warns that
+the license text needs the full OGL.
+
 ### 10. Starting material (optional)
 
 1. In a new empty folder, run `/create-campaign` and give the agent a text
@@ -135,6 +145,42 @@ and stat blocks follow that edition.
 
 Check: the agent uses the material. A scanned PDF with no text layer should
 be refused with a clear message.
+
+### 11. Publish a PDF (Release 2 beta)
+
+This needs the Pango library (see the README's Requirements). Use a master
+campaign with at least one chapter, an adventure with a map, and an
+encounter.
+
+1. In the master's folder, run `/publish-campaign`.
+2. When asked, give an author, copyright holder, and edition, and say yes
+   to the copyright line in the footer.
+3. Publish again with `/publish-campaign A4`, then once with a map appendix.
+4. In an epic with two books, run `/publish-campaign` in the epic's folder.
+5. In a running copy, run `/publish-campaign`.
+
+Check:
+- The readiness report lists placeholder text and empty sections before
+  anything is built, and the agent asks before publishing anyway.
+- The PDF opens from the link the agent gives, in `published/`.
+- Title page, copyright page (with the SRD attribution), and contents with
+  correct page numbers.
+- PDF bookmarks for each chapter, adventure, encounter, and appendix.
+- Links between sections and to index entries jump to the right page.
+- Each map appears once, at a readable size; a second use says "Map: ...
+  (page N)". Maps that are only linked appear in a Maps appendix.
+- Each encounter tracker is on its own page, with room to write.
+- `GETTING_STARTED.md`, `OPEN_ITEMS.md`, and `WORKLOG.md` are not in the
+  PDF, and no campaign file changed (`git status` is clean).
+- The epic gives one PDF per book, numbered in reading order, each saying
+  "Book N of ...".
+- The running copy is refused, and the agent offers to publish its master.
+- The PDF prints cleanly on a home printer: margins, page numbers, and map
+  legibility.
+
+For layout feedback, note what you'd change: fonts, spacing, headings,
+where pages break. Styling themes are a later release, so this helps
+shape them.
 
 ## Reporting
 
