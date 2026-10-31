@@ -1,27 +1,22 @@
 # Campaign Agent
 
-The Campaign Agent helps a DM create D&D campaigns as Markdown files in VS
+The Campaign Agent helps a DM write D&D campaigns as Markdown files in VS
 Code, with Claude Code as the conversation. It is a Claude Code plugin with a
-Python MCP server for the campaign tools. See
-[REQUIREMENTS.md](REQUIREMENTS.md) for the full design and
-[TESTING.md](TESTING.md) for what to try.
+Python MCP server for the campaign tools.
 
-This version supports:
+| Document | For | What it covers |
+|---|---|---|
+| [User Guide](USER_GUIDE.md) | DMs and authors | How to work with the agent: structures, creating, checking, running, publishing |
+| [REQUIREMENTS.md](REQUIREMENTS.md) | Planning | What the agent must do, including what is not built yet |
+| [DESIGN.md](DESIGN.md) | Developers | How it is built: tools, files, git, publishing |
+| [TESTING.md](TESTING.md) | Beta testers | Scenarios to try and how to report problems |
 
-| Command | What it does |
+## Status
+
+| Available now | Coming |
 |---|---|
-| `/create-campaign` | Starts a new master campaign in an empty folder, or resumes one. |
-| `/check-campaign` | Reports broken links, unlinked maps, index entries that point nowhere, sections missing from their outlines, and numbering problems, without changing anything. |
-| `/create-collection` | Makes a folder a collection of independent campaigns, each in a subfolder. |
-| `/create-epic` | Starts or resumes an epic: one story told as books, each book a campaign in a subfolder. |
-| `/check-epic` | Checks an epic's books against each other and reviews the story across them. Changes nothing. |
-| `/save-campaign` | Saves progress: updates the work log and open items, checks the campaign, and takes a snapshot. |
-| `/start-campaign` | Makes a running copy of a master campaign for a group. |
-| `/publish-campaign` | Release 2 beta: publishes a master campaign as a PDF, or an epic as one PDF per book. |
-
-Claude Code may show the commands with the plugin name as a prefix, such as
-`/campaign-agent:create-campaign`. Game Session and Update modes, which work
-with the Scribe, come in a later version.
+| Creating and checking campaigns; collections and epics; maps; encounter summaries and trackers for D&D 5e (2024 and 2014) and D&D 3.5; saving and resuming; running copies | Game Session and Update modes with the Scribe; splitting a book of an epic |
+| Release 2 beta: `/publish-campaign` makes a digital PDF | Release 2: importing a published PDF, watermarks, the print-ready PDF; later, styling themes |
 
 ## Requirements
 
@@ -79,115 +74,11 @@ Run these from the root of your clone of this repository.
    plugin.
 
 Because the marketplace is your local clone, Claude Code reads the plugin
-directly from it. After `git pull`, start a new session to pick up changes.
+directly from it. After `git pull`, reinstall the package if its
+dependencies changed (step 1), then start a new session to pick up changes.
 
-## Use
-
-1. Open an empty folder in VS Code and run `/create-campaign`. The agent
-   sets up `campaign.md`, the NPC, item, and location indexes, the `maps/`
-   and `chapters/` folders, and three working documents, then develops the
-   campaign with you. It recommends making the campaign a git repository.
-   Campaigns use D&D 5e (2024) rules unless you name another edition.
-2. Read `GETTING_STARTED.md` (press Ctrl+Shift+V for the formatted view).
-   It keeps the introduction from scrolling away in the chat.
-3. Keep the Explorer, the Markdown preview, and a map open beside the
-   conversation. Save maps as PNG, JPEG, or WebP into `maps/`.
-4. Run `/check-campaign` at any time. A new campaign reports that it has no
-   goal and no adventure yet; that is expected.
-5. Before you stop, run `/save-campaign`. Next time, open the folder and
-   run `/create-campaign` to pick up where you left off.
-6. When the campaign is ready to play, run `/start-campaign` from the
-   master.
-
-### Single campaigns, collections, and epics
-
-Create a git repository first (for example `mkdir crown && cd crown && git
-init`), open it in VS Code, then choose a structure. If you forget the
-repository, the agent offers to create it.
-
-| Structure | How to set it up | Use it for |
-|---|---|---|
-| Single campaign | Run `/create-campaign` in the repository's folder. | One campaign. |
-| Collection | Run `/create-collection` in the repository's folder, then create a subfolder for each campaign and run `/create-campaign` in it. | Independent campaigns kept together, such as one collection per level range. |
-| Epic | Run `/create-epic` in the repository's folder, then create a subfolder for each book and run `/create-campaign` in it. | One long story told as books. `epic.md` holds the story and the books in order, and epic-wide indexes track who and what carries across books. |
-
-`/save-campaign` commits only the folder you save it from, so other
-campaigns or books in the same repository are never swept in. In a
-collection or epic, `/start-campaign` makes the running copy a sibling
-folder in the same repository.
-
-`/check-epic` checks an epic's books against each other, for example an NPC
-who dies in Book 1 but is a key NPC in Book 2, then reviews the story across
-the books for timeline, character, and foreshadowing problems.
-
-### Working documents
-
-| File | What it is |
-|---|---|
-| `GETTING_STARTED.md` | Your guide to the commands, saving and resuming, the VS Code layout, maps, and master and running copies. |
-| `OPEN_ITEMS.md` | Open questions and unfinished work. The agent checks items off as they are done. Reorder items or mark them **(priority)** to steer what it works on. |
-| `WORKLOG.md` | A short journal of each working session: what was done and decided, and ideas set aside. |
-
-`/save-campaign` snapshots the campaign as a git commit, or as a zip file in
-`.campaign/snapshots/` when the campaign is not a git repository. Your
-conversations are saved by Claude Code too: reopen one from the past
-conversations button in the Claude Code panel, or with `/resume`.
-
-Campaigns created with an earlier version get the working documents added
-the next time you run `/create-campaign` in them.
-
-### Encounters
-
-Every encounter starts with a summary: each creature's Challenge Rating and
-XP, the fight's total XP and XP per character, and its difficulty for the
-party it is built for. It has full stat blocks for its creatures, taken from
-the open-licensed SRD for the campaign's rules edition or written new, and
-ends with a printable encounter tracker for CR, AC, HP, damage, conditions,
-and initiative.
-
-### Master campaigns and running copies
-
-The folder you create is the **master**: the campaign as written. Games
-aren't run from it, because game sessions and the updates after them change
-the files. `/start-campaign` makes a **running copy** for one group, next to
-the master as `<master>--<group>`, and you open that folder to run the
-group's games. One master can start any number of groups.
-
-A `.campaign/campaign.json` marker records which kind of folder it is. Don't
-edit it by hand.
-
-`/start-campaign` refuses when:
-- the folder is already a running copy;
-- the master is a git repository with uncommitted changes, because the copy
-  is cloned from the last commit; or
-- the destination folder already exists.
-
-### Publishing (Release 2 beta)
-
-`/publish-campaign` turns a finished master campaign into a PDF for readers
-or buyers. It first reports anything worth fixing: the usual checks plus
-placeholder text, empty sections, adventures with no map, and missing
-publishing details. You decide whether to fix them or publish anyway.
-
-The PDF has a title page, a copyright page, and a table of contents, then
-the overview, each chapter with its adventures and encounters, and the NPC,
-item, and location indexes as appendices. Bookmarks and cross-references
-are clickable, each map is printed once with the section that first shows
-it, and each encounter tracker gets its own page for writing on at the
-table. The working documents are left out.
-
-- Publishing details (author, copyright holder and year, rights statement,
-  license or attribution text, credits, cover image, footer notice, page
-  size, map appendix) are saved in `.campaign/publish.json` and reused by
-  every edition. The edition number is kept in the campaign marker.
-- PDFs are written to `published/`, which new campaigns leave out of git.
-  Publishing never changes the campaign files.
-- An epic is published as one PDF per book, in the order of `epic.md`'s
-  Books list. Details set on the epic apply to every book.
-- Running copies are never published, because they hold play history.
-
-Not yet: the print-ready PDF for print-on-demand services, watermarks,
-embedding the source for `/import-campaign`, and styling themes.
+To get started, open an empty folder in VS Code and run `/create-campaign`;
+the [User Guide](USER_GUIDE.md) explains the rest.
 
 ## Troubleshooting
 
@@ -218,21 +109,5 @@ claude plugin validate --strict agents/campaign/plugin
 
 Python changes take effect when the MCP server restarts, for example in a
 new session. To load the plugin without installing it, start the CLI with
-`claude --plugin-dir agents/campaign/plugin`.
-
-| Path | Contents |
-|---|---|
-| `plugin/.claude-plugin/plugin.json` | Plugin manifest and the Python interpreter option |
-| `plugin/.mcp.json` | Starts the MCP server |
-| `plugin/skills/campaign-rules/` | Rules the agent follows in any campaign folder |
-| `plugin/skills/create-campaign/`, `check-campaign/`, `create-collection/`, `create-epic/`, `check-epic/`, `save-campaign/`, `start-campaign/`, `publish-campaign/` | The commands |
-| `src/ai_campaign/mcp_server.py` | MCP tools |
-| `src/ai_campaign/structure.py` | Reading and checking campaign folders |
-| `src/ai_campaign/lifecycle.py` | Creating masters, starting running copies, and snapshots |
-| `src/ai_campaign/gitops.py` | Git: commits scoped to one folder of a repository |
-| `src/ai_campaign/containers.py` | Collection and epic markers and membership |
-| `src/ai_campaign/publish.py` | Publishing readiness, publishing details, and the PDF |
-| `src/ai_campaign/epic.py` | Checks across an epic's books |
-| `src/ai_campaign/encounters.py` | Encounter XP and difficulty |
-| `src/ai_campaign/marker.py` | The `.campaign/campaign.json` marker |
-| `src/ai_campaign/pdf.py` | Text extraction from PDF starting material |
+`claude --plugin-dir agents/campaign/plugin`. The modules and file formats
+are described in [DESIGN.md](DESIGN.md).
