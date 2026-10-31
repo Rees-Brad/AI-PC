@@ -37,8 +37,9 @@ Follow the `campaign-rules` skill throughout.
 5. **If it is not a campaign:**
    - Ask for the campaign title, unless one was given: $ARGUMENTS
    - Tell the DM the campaign will use D&D 5e (2024) rules unless they want
-     another edition, such as D&D 5e (2014). Only pass `rules` when the DM
-     names one.
+     another edition: D&D 5e (2014) or D&D 3.5 are also supported. Only
+     pass `rules` when the DM names one, using the edition's name, such as
+     `D&D 3.5`.
    - If the folder is empty apart from `.vscode` or `.git`, create the
      campaign here. Otherwise propose a new subfolder named after the title,
      such as `./the-sunken-crown`, and confirm it with the DM. If the

@@ -26,7 +26,7 @@ from markdown.treeprocessors import Treeprocessor
 from weasyprint import HTML
 from weasyprint.urls import URLFetcher
 
-from ai_campaign import containers, epic
+from ai_campaign import containers, epic, systems
 from ai_campaign.marker import read_marker, write_marker
 from ai_campaign.structure import (
     CAMPAIGN_FILE,
@@ -258,7 +258,22 @@ def _detail_issues(folder: Path, root: Path) -> list[Issue]:
     cover = details.get("cover_image")
     if cover and not (Path(details["cover_base"]) / cover).is_file():
         issues.append(Issue("error", rel, f"Cover image '{cover}' is missing."))
+    if _rules(folder) and systems.rules_family(_rules(folder)) == systems.DND_3_5 and (
+        "open game license" not in str(details.get("license_text") or "").lower()
+    ):
+        issues.append(Issue("warning", rel, "D&D 3.5 material is Open Game Content under the "
+                            "Open Game License 1.0a. Add the full license text and its Section "
+                            "15 notice to the license text, and say which material is Open Game "
+                            "Content."))
     return issues
+
+
+def _rules(folder: Path) -> str | None:
+    marker = read_marker(folder)
+    if marker is not None:
+        return marker.rules
+    container = containers.read_container(folder)
+    return container.get("rules") if container else None
 
 
 # Rendering

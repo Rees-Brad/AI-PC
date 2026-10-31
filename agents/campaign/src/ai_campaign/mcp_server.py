@@ -138,9 +138,12 @@ def encounter_xp(
 ) -> dict[str, Any]:
     """Work out an encounter's XP and difficulty. creatures is a list of
     {"name": ..., "cr": "1/4", "count": 3}; party_levels lists each character's level,
-    such as [3, 3, 3, 3]. Returns XP per creature and in total, XP per character, and, for
-    D&D 5e (2024), the Low, Moderate, and High XP budgets and the encounter's difficulty.
-    Use it for every encounter summary instead of doing the arithmetic yourself."""
+    such as [3, 3, 3, 3]; rules is the campaign's rules edition. For D&D 5e, returns XP per
+    creature and in total and XP per character, and for the 2024 rules the Low, Moderate,
+    and High XP budgets and the difficulty. For D&D 3.5, returns the Encounter Level, the
+    party level, the difficulty (Easy, Challenging, Very difficult, Overpowering), and an
+    approximate XP award for each character. Use it for every encounter summary instead of
+    doing the arithmetic yourself."""
     with _reported():
         return encounters.encounter_xp(creatures, party_levels, rules)
 

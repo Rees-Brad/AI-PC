@@ -198,3 +198,12 @@ def test_epic_publishes_one_pdf_per_book_in_reading_order(tmp_path: Path) -> Non
 def test_publish_refuses_folders_that_are_not_campaigns(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="not a campaign"):
         publish.publish(tmp_path)
+
+
+def test_readiness_asks_for_the_ogl_in_a_3_5_campaign(tmp_path: Path) -> None:
+    keep = tmp_path / "keep"
+    create_campaign(keep, "The Keep", rules="D&D 3.5")
+    messages = [i.message for i in publish.readiness(keep)]
+    assert any("Open Game License 1.0a" in m for m in messages)
+    publish.set_publish_details(keep, license_text="OPEN GAME LICENSE Version 1.0a ...")
+    assert not any("Open Game License 1.0a" in i.message for i in publish.readiness(keep))

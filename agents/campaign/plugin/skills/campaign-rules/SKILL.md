@@ -91,7 +91,10 @@ not run git commands for this yourself.
 
 The `## Rules` section of `campaign.md` records the game system and edition.
 The default is D&D 5e (2024); use another edition only when the DM names
-one. Follow the recorded edition for every rule, creature, spell, and item.
+one. The supported editions are D&D 5e (2024), D&D 5e (2014), and D&D 3.5;
+pass one of these names as `rules` when creating a campaign or epic. For any
+other system, say that the agent's encounter tools and attribution don't
+cover it before going ahead. Follow the recorded edition for every rule, creature, spell, and item.
 If `campaign.md` has no Rules section, ask the DM which edition to use
 (suggest D&D 5e 2024) and add it before writing stat blocks.
 
@@ -106,15 +109,26 @@ it has a full stat block, never just a name like "thug" or "scout".
   and condition immunities, resistances, and vulnerabilities; senses and
   passive Perception; languages; CR and XP (and proficiency bonus); traits;
   actions; bonus actions, reactions, and legendary actions where they apply.
+- For D&D 3.5, use the 3.5 stat block instead: size, type, and subtypes;
+  Hit Dice and hp; Initiative; Speed; Armor Class with touch and
+  flat-footed; Base Attack/Grapple; Attack and Full Attack; Space/Reach;
+  Special Attacks and Special Qualities; saves (Fort, Ref, Will); the six
+  abilities; Skills; Feats; Environment; Organization; Challenge Rating;
+  Treasure; Alignment; Advancement; and Level Adjustment. Characters with
+  class levels list their classes and levels.
 - A named NPC who fights, such as a bandit leader, gets their own stat block
   built from a base creature, with their changes noted.
 - Take standard creatures only from the open-licensed System Reference
   Document for the recorded edition (SRD 5.2 for D&D 5e 2024, SRD 5.1 for
-  5e 2014), using the names and statistics as they appear there. If a
+  5e 2014, SRD 3.5 for D&D 3.5), using the names and statistics as they appear there. If a
   creature is not in that SRD, write an original stat block instead. Never
   copy stat blocks from other books; campaigns may be published and sold.
 - Keep the SRD attribution statement in the Rules section of
-  `campaign.md` whenever SRD material is used.
+  `campaign.md` whenever SRD material is used. SRD 3.5 material is Open
+  Game Content under the Open Game License 1.0a, which needs more than an
+  attribution: a published copy must include the license's full text and
+  Section 15 notice, and say which material is Open Game Content. Remind
+  the DM when they plan to share or sell a 3.5 campaign.
 - An adventure that includes a fight either contains the stat blocks or
   includes the encounter's full text, so the DM never needs another file at
   the table.
@@ -147,6 +161,26 @@ Built for 4 characters of level 2.
 Give each difficulty variant its own total and difficulty line. The XP
 awarded in play is tracked after the session, not here.
 
+For D&D 3.5, pass `rules` to `encounter_xp` and write the summary in 3.5
+terms: each creature's CR and count, the Encounter Level (EL), the party
+level, and the difficulty (Easy, Challenging, Very difficult, or
+Overpowering). The tool's XP per character is an approximation of the
+Dungeon Master's Guide table; give it as "about", and say the DM should
+check it there.
+
+```markdown
+## Encounter summary
+
+Built for 4 characters of level 2 (party level 2).
+
+| Creature | CR | Count |
+|---|---|---|
+| Orc | 1/2 | 4 |
+
+**Encounter Level:** 3 · **Difficulty:** Very difficult · **XP:** about 212
+each (check the DMG table)
+```
+
 ## Encounter tracker
 
 End every encounter file with an `## Encounter tracker` table the DM can
@@ -160,6 +194,14 @@ print and write on, with one row per individual creature:
 | Bandit 1 | 1/8 | 12 | 11 | | | |
 | Bandit 2 | 1/8 | 12 | 11 | | | |
 | Gant (thug) | 1 | 11 | 32 | | | |
+```
+
+For D&D 3.5, use AC with touch and flat-footed, and hp:
+
+```markdown
+| Creature | CR | AC (touch, flat-footed) | hp | Damage taken | Conditions | Initiative |
+|---|---|---|---|---|---|---|
+| Orc 1 | 1/2 | 13 (10, 13) | 5 | | | |
 ```
 
 Update the tracker whenever the creatures in the encounter change,

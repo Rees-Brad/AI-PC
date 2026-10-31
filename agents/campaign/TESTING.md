@@ -128,6 +128,16 @@ Check:
 Check: `campaign.md` records the 2014 edition with the SRD 5.1 attribution,
 and stat blocks follow that edition.
 
+2. In another empty folder, run `/create-campaign` and ask for D&D 3.5.
+   Ask for an encounter with four orcs for four level 1 characters.
+
+Check: `campaign.md` says the SRD 3.5 material is Open Game Content under
+the OGL 1.0a, with its Section 15 notice. The stat blocks use the 3.5
+format (Hit Dice, Base Attack/Grapple, Fort/Ref/Will). The summary gives
+Encounter Level 3 and "Very difficult", and calls the XP approximate. The
+tracker shows AC with touch and flat-footed. `/publish-campaign` warns that
+the license text needs the full OGL.
+
 ### 10. Starting material (optional)
 
 1. In a new empty folder, run `/create-campaign` and give the agent a text
